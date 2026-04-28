@@ -2,14 +2,14 @@
    1. THEME TOKENS
    ============================================================ */
 :root {
-    --accent:     #ffc000;
+    --accent:     #e88300;
     --bg:         #bcc0c4;
     --surface:    #f7f8fa;
     --surface-2:  #eceff3;
     --text:       #0e1116;
     --muted:      #4c5461;
     --border:     #d6dae2;
-    --ring:       rgba(255, 192, 0, 0.35);
+    --ring:       rgba(232, 131, 0, 0.35);
     --radius-lg:  24px;
     --radius-md:  14px;
     --shadow-1:   0 10px 25px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.05);
@@ -18,13 +18,13 @@
 }
 
 html[data-theme="dark"] {
-    --bg:        #191e24;
-    --surface:   #1f252e;
-    --surface-2: #141920;
+    --bg:        #042919;
+    --surface:   #0a3320;
+    --surface-2: #062011;
     --text:      #eef2f7;
-    --muted:     #98a3b3;
-    --border:    #2a303a;
-    --ring:      rgba(255, 192, 0, 0.45);
+    --muted:     #7a9e8a;
+    --border:    #0f4028;
+    --ring:      rgba(232, 131, 0, 0.45);
     --shadow-1:  0 12px 28px rgba(0,0,0,0.45), 0 6px 12px rgba(0,0,0,0.35);
     --shadow-2:  0 20px 44px rgba(0,0,0,0.55), 0 8px 18px rgba(0,0,0,0.45);
 }
@@ -47,8 +47,8 @@ html {
 body {
     font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
     background:
-        radial-gradient(1200px 800px at 80% -10%, rgba(255,192,0,0.08), transparent 60%),
-        radial-gradient(900px 700px at -10% 120%, rgba(255,192,0,0.05), transparent 50%),
+        radial-gradient(1200px 800px at 80% -10%, rgba(232,131,0,0.08), transparent 60%),
+        radial-gradient(900px 700px at -10% 120%, rgba(232,131,0,0.05), transparent 50%),
         var(--bg);
     color: var(--text);
     min-height: 100vh;
@@ -342,9 +342,9 @@ button.danger:hover {
 }
 
 .auth-error--closed {
-    background: color-mix(in srgb, #6366f1 10%, var(--surface));
-    border-color: color-mix(in srgb, #6366f1 40%, var(--border));
-    color: #818cf8;
+    background: color-mix(in srgb, #850312 10%, var(--surface));
+    border-color: color-mix(in srgb, #850312 40%, var(--border));
+    color: #850312;
 }
 
 
