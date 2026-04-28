@@ -11,7 +11,13 @@
 <!-- ── Header ── -->
 <div class="app-header">
     <h1>♣ Gin <span>Rummy</span> ♠</h1>
-    <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">🌙</button>
+    <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="font-size: 0.85rem; color: var(--muted); font-weight: 600;">{{ username }}</span>
+        <a href="/logout" style="text-decoration: none;">
+            <button class="danger">Logout</button>
+        </a>
+        <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">🌙</button>
+    </div>
 </div>
 
 <!-- ── Lobby ── -->
