@@ -47,7 +47,7 @@ def build_game_state(game: Game, player: str) -> GameState:
 @app.get("/")
 def lobby(request: Request):
     """This endpoint serves the main game board HTML page via Jinja2."""
-    return templates.TemplateResponse("board.html", {"request": request})
+    return templates.TemplateResponse(request, "board.html")
 
 
 @app.post("/games")
