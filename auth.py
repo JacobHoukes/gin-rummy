@@ -1,8 +1,9 @@
+import os
 import bcrypt
 from itsdangerous import URLSafeTimedSerializer
 from fastapi import Request, HTTPException
 
-SECRET_KEY = "change-this-to-a-long-random-string-before-deploying"
+SECRET_KEY = os.environ.get("SECRET_KEY", "change-this-to-a-long-random-string-before-deploying")
 SESSION_COOKIE = "gr_session"
 
 serializer = URLSafeTimedSerializer(SECRET_KEY)
