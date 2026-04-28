@@ -18,12 +18,12 @@
 }
 
 html[data-theme="dark"] {
-    --bg:        #042919;
-    --surface:   #0a3320;
-    --surface-2: #062011;
+    --bg:        #021a0f;
+    --surface:   #062211;
+    --surface-2: #041508;
     --text:      #eef2f7;
     --muted:     #7a9e8a;
-    --border:    #0f4028;
+    --border:    #0a3018;
     --ring:      rgba(232, 131, 0, 0.45);
     --shadow-1:  0 12px 28px rgba(0,0,0,0.45), 0 6px 12px rgba(0,0,0,0.35);
     --shadow-2:  0 20px 44px rgba(0,0,0,0.55), 0 8px 18px rgba(0,0,0,0.45);

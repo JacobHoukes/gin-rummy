@@ -6,7 +6,7 @@
     <title>Gin Rummy — Login</title>
 
     <style id="critical-theme">
-        html, body { background: #191e24; min-height: 100%; }
+        html, body { background: #021a0f; min-height: 100%; }
     </style>
 
     <script>
@@ -17,7 +17,7 @@
                 document.documentElement.setAttribute('data-theme', theme);
                 var sheet = document.getElementById('critical-theme');
                 if (sheet) sheet.textContent = theme === 'dark'
-                    ? 'html,body{background:#191e24;min-height:100%;}'
+                    ? 'html,body{background:#021a0f;min-height:100%;}'
                     : 'html,body{background:#bcc0c4;min-height:100%;}';
             } catch(_) {}
         })();
@@ -110,7 +110,7 @@
         try { localStorage.setItem('gr-theme', theme); } catch(_) {}
         const sheet = document.getElementById('critical-theme');
         if (sheet) sheet.textContent = theme === 'dark'
-            ? 'html,body{background:#191e24;min-height:100%;}'
+            ? 'html,body{background:#021a0f;min-height:100%;}'
             : 'html,body{background:#bcc0c4;min-height:100%;}';
     }
 
