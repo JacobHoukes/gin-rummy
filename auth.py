@@ -1,22 +1,21 @@
-from passlib.context import CryptContext
+import bcrypt
 from itsdangerous import URLSafeTimedSerializer
 from fastapi import Request, HTTPException
 
 SECRET_KEY = "change-this-to-a-long-random-string-before-deploying"
 SESSION_COOKIE = "gr_session"
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 serializer = URLSafeTimedSerializer(SECRET_KEY)
 
 
 def hash_password(password: str) -> str:
-    """This function hashes a plain-text password using bcrypt and returns the hash."""
-    return pwd_context.hash(password)
+    """This function hashes a plain-text password using bcrypt and returns the hash as a string."""
+    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
 
 
 def verify_password(plain: str, hashed: str) -> bool:
     """This function verifies a plain-text password against a bcrypt hash and returns True if they match."""
-    return pwd_context.verify(plain, hashed)
+    return bcrypt.checkpw(plain.encode(), hashed.encode())
 
 
 def create_session(user_id: int) -> str:
@@ -27,7 +26,7 @@ def create_session(user_id: int) -> str:
 def decode_session(token: str) -> int:
     """This function decodes a signed session token and returns the user ID, or raises an exception if invalid or expired."""
     try:
-        return serializer.loads(token, max_age=60 * 60 * 24 * 7)  # 7 days
+        return serializer.loads(token, max_age=60 * 60 * 24 * 7)
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid or expired session")
 

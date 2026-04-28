@@ -63,16 +63,17 @@
 <main class="page">
 
     <!-- Lobby Panel -->
-    <div id="lobby">
-        <div class="lobby-section">
+    <div id="lobby" class="lobby-cards">
+
+        <div class="lobby-card">
             <h2>Create a new game</h2>
             <div class="lobby-row">
                 <input id="nameInput" placeholder="Your name" />
                 <button class="accent" onclick="createGame()">Create Game</button>
             </div>
         </div>
-        <hr class="lobby-divider">
-        <div class="lobby-section">
+
+        <div class="lobby-card">
             <h2>Join existing game</h2>
             <div class="lobby-row">
                 <input id="joinCode" placeholder="Game code" />
@@ -80,6 +81,7 @@
                 <button class="accent" onclick="joinGame()">Join Game</button>
             </div>
         </div>
+
     </div>
 
     <!-- Game Table -->
@@ -132,6 +134,21 @@
 <footer class="footer">
     <p class="footer-copy">Gin Rummy &copy; 2026</p>
 </footer>
+
+<!-- ── Game Code Modal ── -->
+<div id="gameCodeModal">
+    <div class="modal-box">
+        <h2>Game Created!</h2>
+        <p>Share this code with your friend to join the game.</p>
+        <div class="game-code-display">
+            <span id="gameCodeText"></span>
+            <button onclick="copyGameCode()" id="copyBtn">Copy</button>
+        </div>
+        <div class="modal-actions">
+            <button class="accent" onclick="closeGameCodeModal()">Let's play</button>
+        </div>
+    </div>
+</div>
 
 <!-- ── Knock Modal ── -->
 <div id="knockModal">
@@ -247,7 +264,7 @@
         const data = await res.json();
         gameId = data.game_id;
         myPlayer = 'player1';
-        alert(`Game created! Share this code with your friend: ${gameId}`);
+        showGameCodeModal(gameId);
         startGame(data.state);
     }
 
@@ -336,6 +353,24 @@
         const data = await res.json();
         if (res.ok) { log(`You discarded ${selectedCard}.`); applyState(data.state); }
         else log(`⚠ ${data.detail}`);
+    }
+
+    function showGameCodeModal(code) {
+        document.getElementById('gameCodeText').textContent = code;
+        document.getElementById('gameCodeModal').style.display = 'flex';
+    }
+
+    function closeGameCodeModal() {
+        document.getElementById('gameCodeModal').style.display = 'none';
+    }
+
+    function copyGameCode() {
+        const code = document.getElementById('gameCodeText').textContent;
+        navigator.clipboard.writeText(code).then(() => {
+            const btn = document.getElementById('copyBtn');
+            btn.textContent = 'Copied!';
+            setTimeout(() => btn.textContent = 'Copy', 2000);
+        });
     }
 
     // ── Knock ──
