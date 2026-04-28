@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,93 +8,171 @@
 </head>
 <body>
 
-<h1>♣ Gin Rummy ♠</h1>
+<!-- ── Header ── -->
+<div class="app-header">
+    <h1>♣ Gin <span>Rummy</span> ♠</h1>
+    <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">🌙</button>
+</div>
 
 <!-- ── Lobby ── -->
 <div id="lobby">
-    <div>
-        <input id="nameInput" placeholder="Your name" />
-        <button onclick="createGame()">Create Game</button>
+    <div class="lobby-section">
+        <h2>Create a new game</h2>
+        <div class="lobby-row">
+            <input id="nameInput" placeholder="Your name" />
+            <button class="accent" onclick="createGame()">Create Game</button>
+        </div>
     </div>
-    <div style="margin-top:16px">
-        <input id="joinCode" placeholder="Game code" />
-        <input id="joinName" placeholder="Your name" />
-        <button onclick="joinGame()">Join Game</button>
+    <hr class="lobby-divider">
+    <div class="lobby-section">
+        <h2>Join existing game</h2>
+        <div class="lobby-row">
+            <input id="joinCode" placeholder="Game code" />
+            <input id="joinName" placeholder="Your name" />
+            <button class="accent" onclick="joinGame()">Join Game</button>
+        </div>
     </div>
 </div>
 
-<!-- ── Game Board ── -->
+<!-- ── Game Table ── -->
 <div id="game">
-    <div id="scores"></div>
-    <div id="status"></div>
 
-    <div class="area-label">Piles</div>
-    <div class="piles">
-        <div>
-            <div class="stock-back" onclick="drawCard('stock')"></div>
+    <!-- Opponent Zone -->
+    <div id="opponent-zone">
+        <div class="zone-header">
+            <span class="zone-name" id="opponentName">Opponent</span>
+            <span class="zone-score" id="opponentScore">0 pts</span>
+        </div>
+        <div id="opponent-hand"></div>
+    </div>
+
+    <!-- Table Center -->
+    <div id="table-center">
+        <div class="pile-group">
+            <img id="stockImg" class="stock-back"
+                 src="https://deckofcardsapi.com/static/img/back.png"
+                 alt="Stock" onclick="drawCard('stock')" />
             <div class="pile-label">Stock (<span id="stockCount">0</span>)</div>
         </div>
-        <div>
-            <div id="discardTop" class="pile-card" onclick="drawCard('discard')"></div>
+
+        <div id="status">Waiting...</div>
+
+        <div class="pile-group">
+            <div id="discardContainer">
+                <div class="empty-pile">—</div>
+            </div>
             <div class="pile-label">Discard</div>
         </div>
     </div>
 
-    <div class="area-label">Your Hand</div>
-    <div id="hand" class="card-row"></div>
-
-    <div id="actions">
-        <button id="btnDiscard" onclick="discardSelected()" disabled>Discard Selected</button>
-        <button id="btnKnock" onclick="openKnockModal()" disabled>Knock</button>
+    <!-- Your Zone -->
+    <div id="your-zone">
+        <div class="zone-header">
+            <span class="zone-name" id="yourName">You</span>
+            <span class="zone-score" id="yourScore">0 pts</span>
+        </div>
+        <div id="hand"></div>
+        <div id="actions">
+            <button id="btnDiscard" class="accent" onclick="discardSelected()" disabled>Discard Selected</button>
+            <button id="btnKnock" onclick="openKnockModal()" disabled>Knock</button>
+        </div>
+        <div id="log"></div>
     </div>
 
-    <div id="log"></div>
 </div>
 
 <!-- ── Knock Modal ── -->
-<div id="knockModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%;
-     background:rgba(0,0,0,0.7); align-items:center; justify-content:center;">
-    <div style="background:#1a5c2a; padding:30px; border-radius:12px; max-width:500px; width:90%;">
-        <h2 style="margin-bottom:12px;">Declare Melds</h2>
-        <p style="opacity:0.8; font-size:0.9rem; margin-bottom:12px;">
-            Enter each meld as comma-separated cards (e.g. <code>AH,AS,AD</code>), one meld per line.
-        </p>
-        <textarea id="meldInput" rows="5" style="width:100%; border-radius:8px; padding:8px;
-            font-size:1rem; color:#000;"></textarea>
-        <div style="margin-top:12px; display:flex; gap:8px;">
-            <button onclick="submitKnock()">Confirm Knock</button>
-            <button onclick="closeKnockModal()" style="background:#888; color:#fff;">Cancel</button>
+<div id="knockModal">
+    <div class="modal-box">
+        <h2>Declare Melds</h2>
+        <p>Enter each meld as comma-separated cards (e.g. <code>AH,AS,AD</code>), one meld per line.</p>
+        <textarea id="meldInput" rows="5"></textarea>
+        <div class="modal-actions">
+            <button class="accent" onclick="submitKnock()">Confirm Knock</button>
+            <button onclick="closeKnockModal()">Cancel</button>
         </div>
     </div>
 </div>
 
 <script>
+    // ── Theme ──
+    const html = document.documentElement;
+    const toggleBtn = document.querySelector('.theme-toggle');
+
+    function applyTheme(theme) {
+        html.setAttribute('data-theme', theme);
+        toggleBtn.textContent = theme === 'dark' ? '🌙' : '☀️';
+        localStorage.setItem('gr-theme', theme);
+    }
+
+    function toggleTheme() {
+        applyTheme(html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+    }
+
+    // Apply saved theme on load
+    applyTheme(localStorage.getItem('gr-theme') || 'dark');
+
     // ── State ──
     let gameId = null;
     let myPlayer = null;
     let selectedCard = null;
     let pollInterval = null;
 
-    const SUIT_SYMBOLS = { H: '♥', D: '♦', C: '♣', S: '♠' };
-    const RED_SUITS = ['H', 'D'];
-
-    // ── Card Rendering ──
-    function cardHTML(cardStr) {
+    // ── Card Image URL ──
+    function cardImgUrl(cardStr) {
         const suit = cardStr.slice(-1);
-        const rank = cardStr.slice(0, -1);
-        const symbol = SUIT_SYMBOLS[suit];
-        const isRed = RED_SUITS.includes(suit);
-        const label = `${rank}${symbol}`;
-        return `
-            <div class="card ${isRed ? 'red' : ''}" onclick="selectCard('${cardStr}', this)">
-                <div class="top">${label}</div>
-                <div class="suit">${symbol}</div>
-                <div class="bottom">${label}</div>
-            </div>`;
+        let rank = cardStr.slice(0, -1);
+        if (rank === '10') rank = '0';
+        return `https://deckofcardsapi.com/static/img/${rank}${suit}.png`;
     }
 
+    // ── Render Your Hand ──
+    function renderHand(cards) {
+        const handEl = document.getElementById('hand');
+        handEl.innerHTML = '';
+        cards.forEach(card => {
+            const img = document.createElement('img');
+            img.src = cardImgUrl(card);
+            img.alt = card;
+            img.className = 'card-img';
+            img.onclick = () => selectCard(card, img);
+            handEl.appendChild(img);
+        });
+        selectedCard = null;
+    }
+
+    // ── Render Opponent Hand (face-down) ──
+    function renderOpponentHand(count) {
+        const el = document.getElementById('opponent-hand');
+        el.innerHTML = '';
+        for (let i = 0; i < count; i++) {
+            const img = document.createElement('img');
+            img.src = 'https://deckofcardsapi.com/static/img/back.png';
+            img.alt = 'card back';
+            img.className = 'card-back';
+            el.appendChild(img);
+        }
+    }
+
+    // ── Render Discard ──
+    function renderDiscard(cardStr) {
+        const container = document.getElementById('discardContainer');
+        if (!cardStr) {
+            container.innerHTML = '<div class="empty-pile">—</div>';
+            return;
+        }
+        const img = document.createElement('img');
+        img.src = cardImgUrl(cardStr);
+        img.alt = cardStr;
+        img.className = 'pile-card-img';
+        img.onclick = () => drawCard('discard');
+        container.innerHTML = '';
+        container.appendChild(img);
+    }
+
+    // ── Select Card ──
     function selectCard(cardStr, el) {
-        document.querySelectorAll('.card').forEach(c => c.classList.remove('selected'));
+        document.querySelectorAll('.card-img').forEach(c => c.classList.remove('selected'));
         if (selectedCard === cardStr) {
             selectedCard = null;
         } else {
@@ -103,7 +181,7 @@
         }
     }
 
-    // ── Lobby Actions ──
+    // ── Lobby ──
     async function createGame() {
         const name = document.getElementById('nameInput').value.trim();
         if (!name) return alert('Enter your name');
@@ -135,10 +213,10 @@
         startGame(data.state);
     }
 
-    // ── Game Start & Polling ──
+    // ── Start & Poll ──
     function startGame(state) {
         document.getElementById('lobby').style.display = 'none';
-        document.getElementById('game').style.display = 'block';
+        document.getElementById('game').style.display = 'flex';
         applyState(state);
         pollInterval = setInterval(pollState, 3000);
     }
@@ -149,51 +227,42 @@
         applyState(data.state);
     }
 
-    // ── Apply State to UI ──
+    // ── Apply State ──
     function applyState(state) {
-        // Scores
-        document.getElementById('scores').innerHTML =
-            `${state.player1_name}: <strong>${state.player1_score}</strong> pts &nbsp;|&nbsp;
-             ${state.player2_name || 'Waiting...'}: <strong>${state.player2_score}</strong> pts`;
+        const isMyTurn = state.current_turn === myPlayer;
+
+        // Names & scores
+        document.getElementById('yourName').textContent = myPlayer === 'player1'
+            ? state.player1_name : (state.player2_name || 'You');
+        document.getElementById('opponentName').textContent = myPlayer === 'player1'
+            ? (state.player2_name || 'Waiting for opponent...') : state.player1_name;
+        document.getElementById('yourScore').textContent =
+            (myPlayer === 'player1' ? state.player1_score : state.player2_score) + ' pts';
+        document.getElementById('opponentScore').textContent =
+            (myPlayer === 'player1' ? state.player2_score : state.player1_score) + ' pts';
 
         // Status
-        const isMyTurn = state.current_turn === myPlayer;
         let statusText = '';
-        if (state.phase === 'waiting') {
-            statusText = 'Waiting for opponent to join...';
-        } else if (state.phase === 'playing') {
-            statusText = isMyTurn ? '🟢 Your turn' : '⏳ Opponent\'s turn';
-        } else if (state.phase === 'scoring') {
-            statusText = `Hand over — knocked by ${state.knocked_by}`;
-        } else if (state.phase === 'finished') {
+        if (state.phase === 'waiting')        statusText = '⏳ Waiting for opponent...';
+        else if (state.phase === 'playing')   statusText = isMyTurn ? '🟢 Your turn' : '⏳ Their turn';
+        else if (state.phase === 'scoring')   statusText = '🃏 Hand over';
+        else if (state.phase === 'finished') {
             statusText = '🏆 Game over!';
             clearInterval(pollInterval);
         }
         document.getElementById('status').textContent = statusText;
 
-        // Stock count
+        // Piles
         document.getElementById('stockCount').textContent = state.stock_count;
+        renderDiscard(state.discard_top);
 
-        // Discard pile
-        const discardEl = document.getElementById('discardTop');
-        if (state.discard_top) {
-            const suit = state.discard_top.slice(-1);
-            const rank = state.discard_top.slice(0, -1);
-            const symbol = SUIT_SYMBOLS[suit];
-            const isRed = RED_SUITS.includes(suit);
-            discardEl.className = `pile-card ${isRed ? 'red' : ''}`;
-            discardEl.textContent = `${rank}${symbol}`;
-        } else {
-            discardEl.textContent = '—';
-        }
-
-        // Hand
-        document.getElementById('hand').innerHTML = state.your_hand.map(cardHTML).join('');
-        selectedCard = null;
+        // Hands
+        renderHand(state.your_hand);
+        renderOpponentHand(10);
 
         // Buttons
         document.getElementById('btnDiscard').disabled = !(isMyTurn && state.drawn_this_turn);
-        document.getElementById('btnKnock').disabled = !(isMyTurn && state.drawn_this_turn);
+        document.getElementById('btnKnock').disabled   = !(isMyTurn && state.drawn_this_turn);
     }
 
     // ── Draw ──
@@ -204,12 +273,8 @@
             body: JSON.stringify({ player: myPlayer, source })
         });
         const data = await res.json();
-        if (res.ok) {
-            applyState(data.state);
-            log(`You drew from the ${source}.`);
-        } else {
-            log(`⚠ ${data.detail}`);
-        }
+        if (res.ok) { applyState(data.state); log(`You drew from the ${source}.`); }
+        else log(`⚠ ${data.detail}`);
     }
 
     // ── Discard ──
@@ -221,22 +286,13 @@
             body: JSON.stringify({ player: myPlayer, card: selectedCard })
         });
         const data = await res.json();
-        if (res.ok) {
-            log(`You discarded ${selectedCard}.`);
-            applyState(data.state);
-        } else {
-            log(`⚠ ${data.detail}`);
-        }
+        if (res.ok) { log(`You discarded ${selectedCard}.`); applyState(data.state); }
+        else log(`⚠ ${data.detail}`);
     }
 
     // ── Knock ──
-    function openKnockModal() {
-        document.getElementById('knockModal').style.display = 'flex';
-    }
-
-    function closeKnockModal() {
-        document.getElementById('knockModal').style.display = 'none';
-    }
+    function openKnockModal()  { document.getElementById('knockModal').style.display = 'flex'; }
+    function closeKnockModal() { document.getElementById('knockModal').style.display = 'none'; }
 
     async function submitKnock() {
         const raw = document.getElementById('meldInput').value.trim();
@@ -252,19 +308,17 @@
         closeKnockModal();
         if (res.ok) {
             const msg = data.gin ? '🎉 GIN!' : data.undercut ? '😬 Undercut!' : '✊ Knocked!';
-            log(`${msg} ${data.points_scored} points scored by ${data.winner}.`);
+            log(`${msg} ${data.points_scored} pts scored by ${data.winner}.`);
             applyState(data.state);
-        } else {
-            log(`⚠ ${data.detail}`);
-        }
+        } else log(`⚠ ${data.detail}`);
     }
 
     // ── Log ──
     function log(msg) {
-        const logEl = document.getElementById('log');
+        const el = document.getElementById('log');
         const p = document.createElement('p');
         p.textContent = msg;
-        logEl.prepend(p);
+        el.prepend(p);
     }
 </script>
 
