@@ -20,7 +20,7 @@
 html[data-theme="dark"] {
     --bg:        #191e24;
     --surface:   #1f252e;
-    --surface-2: #1e242d;
+    --surface-2: #141920;
     --text:      #eef2f7;
     --muted:     #98a3b3;
     --border:    #2a303a;
@@ -54,8 +54,8 @@ body {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    padding: 24px 16px;
+    align-items: stretch;
+    padding: 0;
     -webkit-font-smoothing: antialiased;
     transition: background var(--transition), color var(--transition);
 }
@@ -78,22 +78,16 @@ h1 {
 
 h1 span { color: var(--accent); }
 
-
-/* ============================================================
-   4. LAYOUT
-   ============================================================ */
-.app-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    max-width: 960px;
-    margin-bottom: 28px;
+.brand-name {
+    font-size: 1.4rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--text);
 }
 
 
 /* ============================================================
-   5. FORM ELEMENTS
+   4. FORM ELEMENTS
    ============================================================ */
 
 /* -- Inputs -- */
@@ -107,7 +101,7 @@ input {
     font-family: inherit;
     outline: none;
     flex: 1 1 140px;
-    transition: border-color var(--transition), box-shadow var(--transition);
+    transition: border-color var(--transition), box-shadow var(--transition), background var(--transition);
 }
 
 input::placeholder { color: var(--muted); }
@@ -115,6 +109,14 @@ input::placeholder { color: var(--muted); }
 input:focus {
     border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
     box-shadow: 0 0 0 3px var(--ring);
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+    -webkit-box-shadow: 0 0 0 1000px var(--surface-2) inset;
+    -webkit-text-fill-color: var(--text);
+    caret-color: var(--text);
 }
 
 /* -- Buttons -- */
@@ -176,90 +178,172 @@ button.danger:hover {
 
 
 /* ============================================================
-   6. COMPONENTS
+   5. TOPBAR
    ============================================================ */
+.topbar {
+    position: sticky;
+    top: 0;
+    z-index: 200;
+    width: 100%;
+    backdrop-filter: saturate(150%) blur(10px);
+    background: color-mix(in oklab, var(--surface) 88%, transparent);
+    border-bottom: 1px solid var(--border);
+}
 
-/* -- Theme Toggle -- */
-.theme-toggle {
+.topbar-inner {
+    margin: 0 auto;
+    max-width: 960px;
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.topbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.topbar-username {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--muted);
+}
+
+.icon-button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     height: 44px;
-    width: 44px;
+    padding: 0 14px;
+    gap: 4px;
     border-radius: var(--radius-md);
     border: 1px solid var(--border);
     background: var(--surface);
     box-shadow: var(--shadow-1);
     cursor: pointer;
-    font-size: 1.2rem;
     color: var(--text);
     transition: transform var(--transition), box-shadow var(--transition);
 }
 
-.theme-toggle:hover {
+.icon-button:hover {
     transform: translateY(-1px);
     box-shadow: var(--shadow-2);
 }
 
-/* -- Zone Score Pill -- */
-.zone-score {
-    font-size: 0.85rem;
-    font-weight: 700;
-    color: var(--accent);
-    background: color-mix(in srgb, var(--accent) 10%, var(--surface));
-    border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border));
-    padding: 4px 12px;
-    border-radius: 999px;
+.theme-svg-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
 }
 
-/* -- Status Badge -- */
-#status {
-    font-size: 0.9rem;
-    font-weight: 700;
-    color: var(--muted);
+.theme-svg-icon svg {
+    width: 18px;
+    height: 18px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.theme-separator {
+    opacity: 0.5;
+    font-size: 0.9em;
+    color: var(--text);
+}
+
+
+/* ============================================================
+   6. PAGE & FOOTER
+   ============================================================ */
+.page {
+    flex: 1;
+    width: 100%;
+    max-width: 960px;
+    margin: 40px auto;
+    padding: 0 24px;
+    align-self: center;
+}
+
+.footer {
+    width: 100%;
+    border-top: 1px solid var(--border);
+    padding: 20px 24px;
     text-align: center;
-    min-width: 140px;
-    padding: 10px 16px;
-    border-radius: var(--radius-md);
-    border: 1px solid var(--border);
-    background: var(--surface);
-    box-shadow: var(--shadow-1);
+    background: color-mix(in oklab, var(--surface) 88%, transparent);
+    backdrop-filter: saturate(150%) blur(10px);
 }
 
-/* -- Pile Label -- */
-.pile-label {
-    font-size: 0.72rem;
+.footer-copy {
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+
+
+/* ============================================================
+   7. AUTH
+   ============================================================ */
+.auth-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    width: 100%;
+    max-width: 480px;
+    margin: 0 auto;
+}
+
+.auth-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 40px;
+    box-shadow: var(--shadow-2);
+}
+
+.auth-section-title {
+    font-size: 0.8rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.08em;
     color: var(--muted);
+    margin-bottom: 20px;
 }
 
-/* -- Pile Group -- */
-.pile-group {
+.auth-form {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: 8px;
+    gap: 16px;
 }
 
-/* -- Game Log -- */
-#log {
-    background: var(--surface-2);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
+.auth-form input {
+    flex: unset;
+    width: 100%;
+}
+
+.auth-form button {
+    width: 100%;
+    margin-top: 8px;
+}
+
+.auth-error {
+    max-width: 480px;
+    margin: 0 auto 20px;
     padding: 10px 14px;
-    font-size: 0.82rem;
-    max-height: 90px;
-    overflow-y: auto;
-    color: var(--muted);
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, #ef4444 10%, var(--surface));
+    border: 1px solid color-mix(in srgb, #ef4444 40%, var(--border));
+    color: #ef4444;
+    font-size: 0.875rem;
+    font-weight: 600;
 }
-
-#log p { margin: 2px 0; }
 
 
 /* ============================================================
-   7. LOBBY
+   8. LOBBY
    ============================================================ */
 #lobby {
     background: var(--surface);
@@ -300,24 +384,9 @@ button.danger:hover {
     flex-wrap: wrap;
 }
 
-/* Auth forms inside lobby: stack inputs full-width */
-.lobby-section form .lobby-row {
-    flex-direction: column;
-    gap: 16px;
-}
-
-.lobby-section form input {
-    flex: unset;
-    width: 100%;
-}
-
-.lobby-section form button {
-    width: 100%;
-}
-
 
 /* ============================================================
-   8. GAME TABLE
+   9. GAME TABLE
    ============================================================ */
 #game {
     display: none;
@@ -330,7 +399,6 @@ button.danger:hover {
     box-shadow: var(--shadow-2);
 }
 
-/* -- Zone Wrappers -- */
 #opponent-zone {
     background: var(--surface);
     padding: 20px 28px;
@@ -353,7 +421,6 @@ button.danger:hover {
     padding: 20px 28px;
 }
 
-/* -- Zone Header -- */
 .zone-header {
     display: flex;
     justify-content: space-between;
@@ -368,7 +435,16 @@ button.danger:hover {
     color: var(--text);
 }
 
-/* -- Hands -- */
+.zone-score {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+    border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border));
+    padding: 4px 12px;
+    border-radius: 999px;
+}
+
 #opponent-hand {
     display: flex;
     flex-wrap: wrap;
@@ -382,7 +458,6 @@ button.danger:hover {
     margin-bottom: 16px;
 }
 
-/* -- Action Buttons Row -- */
 #actions {
     display: flex;
     flex-wrap: wrap;
@@ -390,9 +465,50 @@ button.danger:hover {
     margin-bottom: 14px;
 }
 
+#status {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--muted);
+    text-align: center;
+    min-width: 140px;
+    padding: 10px 16px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    box-shadow: var(--shadow-1);
+}
+
+.pile-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.pile-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+}
+
+#log {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 10px 14px;
+    font-size: 0.82rem;
+    max-height: 90px;
+    overflow-y: auto;
+    color: var(--muted);
+}
+
+#log p { margin: 2px 0; }
+
 
 /* ============================================================
-   9. CARDS
+   10. CARDS
    ============================================================ */
 .card-img {
     height: 100px;
@@ -470,7 +586,7 @@ button.danger:hover {
 
 
 /* ============================================================
-   10. MODAL
+   11. MODAL
    ============================================================ */
 #knockModal {
     display: none;

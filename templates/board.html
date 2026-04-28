@@ -4,88 +4,134 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gin Rummy</title>
+
+    <style id="critical-theme">
+        html, body { background: #191e24; min-height: 100%; }
+    </style>
+
+    <script>
+        (function() {
+            try {
+                var stored = localStorage.getItem('gr-theme');
+                var theme = stored || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+                document.documentElement.setAttribute('data-theme', theme);
+                var sheet = document.getElementById('critical-theme');
+                if (sheet) sheet.textContent = theme === 'dark'
+                    ? 'html,body{background:#191e24;min-height:100%;}'
+                    : 'html,body{background:#bcc0c4;min-height:100%;}';
+            } catch(_) {}
+        })();
+    </script>
+
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 
-<!-- ── Header ── -->
-<div class="app-header">
-    <h1>♣ Gin <span>Rummy</span> ♠</h1>
-    <div style="display: flex; align-items: center; gap: 10px;">
-        <span style="font-size: 0.85rem; color: var(--muted); font-weight: 600;">{{ username }}</span>
-        <a href="/logout" style="text-decoration: none;">
-            <button class="danger">Logout</button>
-        </a>
-        <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">🌙</button>
-    </div>
-</div>
-
-<!-- ── Lobby ── -->
-<div id="lobby">
-    <div class="lobby-section">
-        <h2>Create a new game</h2>
-        <div class="lobby-row">
-            <input id="nameInput" placeholder="Your name" />
-            <button class="accent" onclick="createGame()">Create Game</button>
+<!-- ── Top Bar ── -->
+<header class="topbar">
+    <div class="topbar-inner">
+        <span class="brand-name">Gin Rummy</span>
+        <div class="topbar-actions">
+            <span class="topbar-username">{{ username }}</span>
+            <a href="/logout"><button class="danger">Logout</button></a>
+            <button id="theme-toggle" class="icon-button" type="button" title="Toggle theme">
+                <span class="theme-svg-icon">
+                    <svg viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="5"/>
+                        <line x1="12" y1="1"  x2="12" y2="3"/>
+                        <line x1="12" y1="21" x2="12" y2="23"/>
+                        <line x1="4.22"  y1="4.22"  x2="5.64"  y2="5.64"/>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                        <line x1="1"  y1="12" x2="3"  y2="12"/>
+                        <line x1="21" y1="12" x2="23" y2="12"/>
+                        <line x1="4.22"  y1="19.78" x2="5.64"  y2="18.36"/>
+                        <line x1="18.36" y1="5.64"  x2="19.78" y2="4.22"/>
+                    </svg>
+                </span>
+                <span class="theme-separator">/</span>
+                <span class="theme-svg-icon">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                    </svg>
+                </span>
+            </button>
         </div>
     </div>
-    <hr class="lobby-divider">
-    <div class="lobby-section">
-        <h2>Join existing game</h2>
-        <div class="lobby-row">
-            <input id="joinCode" placeholder="Game code" />
-            <input id="joinName" placeholder="Your name" />
-            <button class="accent" onclick="joinGame()">Join Game</button>
-        </div>
-    </div>
-</div>
+</header>
 
-<!-- ── Game Table ── -->
-<div id="game">
+<!-- ── Main ── -->
+<main class="page">
 
-    <!-- Opponent Zone -->
-    <div id="opponent-zone">
-        <div class="zone-header">
-            <span class="zone-name" id="opponentName">Opponent</span>
-            <span class="zone-score" id="opponentScore">0 pts</span>
-        </div>
-        <div id="opponent-hand"></div>
-    </div>
-
-    <!-- Table Center -->
-    <div id="table-center">
-        <div class="pile-group">
-            <img id="stockImg" class="stock-back"
-                 src="https://deckofcardsapi.com/static/img/back.png"
-                 alt="Stock" onclick="drawCard('stock')" />
-            <div class="pile-label">Stock (<span id="stockCount">0</span>)</div>
-        </div>
-
-        <div id="status">Waiting...</div>
-
-        <div class="pile-group">
-            <div id="discardContainer">
-                <div class="empty-pile">—</div>
+    <!-- Lobby Panel -->
+    <div id="lobby">
+        <div class="lobby-section">
+            <h2>Create a new game</h2>
+            <div class="lobby-row">
+                <input id="nameInput" placeholder="Your name" />
+                <button class="accent" onclick="createGame()">Create Game</button>
             </div>
-            <div class="pile-label">Discard</div>
+        </div>
+        <hr class="lobby-divider">
+        <div class="lobby-section">
+            <h2>Join existing game</h2>
+            <div class="lobby-row">
+                <input id="joinCode" placeholder="Game code" />
+                <input id="joinName" placeholder="Your name" />
+                <button class="accent" onclick="joinGame()">Join Game</button>
+            </div>
         </div>
     </div>
 
-    <!-- Your Zone -->
-    <div id="your-zone">
-        <div class="zone-header">
-            <span class="zone-name" id="yourName">You</span>
-            <span class="zone-score" id="yourScore">0 pts</span>
+    <!-- Game Table -->
+    <div id="game">
+
+        <div id="opponent-zone">
+            <div class="zone-header">
+                <span class="zone-name" id="opponentName">Opponent</span>
+                <span class="zone-score" id="opponentScore">0 pts</span>
+            </div>
+            <div id="opponent-hand"></div>
         </div>
-        <div id="hand"></div>
-        <div id="actions">
-            <button id="btnDiscard" class="accent" onclick="discardSelected()" disabled>Discard Selected</button>
-            <button id="btnKnock" onclick="openKnockModal()" disabled>Knock</button>
+
+        <div id="table-center">
+            <div class="pile-group">
+                <img id="stockImg" class="stock-back"
+                     src="https://deckofcardsapi.com/static/img/back.png"
+                     alt="Stock" onclick="drawCard('stock')" />
+                <div class="pile-label">Stock (<span id="stockCount">0</span>)</div>
+            </div>
+
+            <div id="status">Waiting...</div>
+
+            <div class="pile-group">
+                <div id="discardContainer">
+                    <div class="empty-pile">—</div>
+                </div>
+                <div class="pile-label">Discard</div>
+            </div>
         </div>
-        <div id="log"></div>
+
+        <div id="your-zone">
+            <div class="zone-header">
+                <span class="zone-name" id="yourName">You</span>
+                <span class="zone-score" id="yourScore">0 pts</span>
+            </div>
+            <div id="hand"></div>
+            <div id="actions">
+                <button id="btnDiscard" class="accent" onclick="discardSelected()" disabled>Discard Selected</button>
+                <button id="btnKnock" onclick="openKnockModal()" disabled>Knock</button>
+            </div>
+            <div id="log"></div>
+        </div>
+
     </div>
 
-</div>
+</main>
+
+<!-- ── Footer ── -->
+<footer class="footer">
+    <p class="footer-copy">Gin Rummy &copy; 2026</p>
+</footer>
 
 <!-- ── Knock Modal ── -->
 <div id="knockModal">
@@ -102,21 +148,23 @@
 
 <script>
     // ── Theme ──
-    const html = document.documentElement;
-    const toggleBtn = document.querySelector('.theme-toggle');
+    const root = document.documentElement;
+    const toggleBtn = document.getElementById('theme-toggle');
 
     function applyTheme(theme) {
-        html.setAttribute('data-theme', theme);
-        toggleBtn.textContent = theme === 'dark' ? '🌙' : '☀️';
-        localStorage.setItem('gr-theme', theme);
+        root.setAttribute('data-theme', theme);
+        try { localStorage.setItem('gr-theme', theme); } catch(_) {}
+        const sheet = document.getElementById('critical-theme');
+        if (sheet) sheet.textContent = theme === 'dark'
+            ? 'html,body{background:#191e24;min-height:100%;}'
+            : 'html,body{background:#bcc0c4;min-height:100%;}';
     }
 
-    function toggleTheme() {
-        applyTheme(html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', () => {
+            applyTheme(root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+        });
     }
-
-    // Apply saved theme on load
-    applyTheme(localStorage.getItem('gr-theme') || 'dark');
 
     // ── State ──
     let gameId = null;
@@ -237,7 +285,6 @@
     function applyState(state) {
         const isMyTurn = state.current_turn === myPlayer;
 
-        // Names & scores
         document.getElementById('yourName').textContent = myPlayer === 'player1'
             ? state.player1_name : (state.player2_name || 'You');
         document.getElementById('opponentName').textContent = myPlayer === 'player1'
@@ -247,7 +294,6 @@
         document.getElementById('opponentScore').textContent =
             (myPlayer === 'player1' ? state.player2_score : state.player1_score) + ' pts';
 
-        // Status
         let statusText = '';
         if (state.phase === 'waiting')        statusText = '⏳ Waiting for opponent...';
         else if (state.phase === 'playing')   statusText = isMyTurn ? '🟢 Your turn' : '⏳ Their turn';
@@ -258,15 +304,11 @@
         }
         document.getElementById('status').textContent = statusText;
 
-        // Piles
         document.getElementById('stockCount').textContent = state.stock_count;
         renderDiscard(state.discard_top);
-
-        // Hands
         renderHand(state.your_hand);
         renderOpponentHand(10);
 
-        // Buttons
         document.getElementById('btnDiscard').disabled = !(isMyTurn && state.drawn_this_turn);
         document.getElementById('btnKnock').disabled   = !(isMyTurn && state.drawn_this_turn);
     }
