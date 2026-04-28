@@ -1,4 +1,7 @@
+import os
 import uuid
+from dotenv import load_dotenv
+
 from fastapi import FastAPI, Depends, HTTPException, Request, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -10,6 +13,8 @@ from models import Game, User
 from schemas import CreateGame, JoinGame, DrawCard, DiscardCard, KnockAction, GameState
 from game import build_deck, shuffle_deck, deal, is_valid_meld, hand_deadwood, is_gin
 from auth import hash_password, verify_password, create_session, get_current_user_id, SESSION_COOKIE
+
+load_dotenv()
 
 Base.metadata.create_all(bind=engine)
 
@@ -84,11 +89,16 @@ def login(request: Request, username: str = Form(), password: str = Form(), db: 
 
 @app.post("/register")
 def register(request: Request, username: str = Form(), password: str = Form(), db: Session = Depends(get_db)):
-    """This endpoint creates a new user account and logs them in immediately."""
+    """This endpoint creates a new user account if the username is on the allowed list, and logs them in immediately."""
+    allowed = [u.strip().lower() for u in os.getenv("ALLOWED_USERNAMES", "").split(",")]
+    if username.lower() not in allowed:
+        return templates.TemplateResponse(request, "login.html", {
+            "error": "registration_closed"
+        })
     if db.query(User).filter(User.username == username).first():
-        return templates.TemplateResponse(request, "login.html", {"error": f"Username '{username}' is already taken"})
+        return templates.TemplateResponse(request, "login.html", {"error": "taken"})
     if len(password) < 6:
-        return templates.TemplateResponse(request, "login.html", {"error": "Password must be at least 6 characters"})
+        return templates.TemplateResponse(request, "login.html", {"error": "password_too_short"})
     user = User(username=username, password_hash=hash_password(password))
     db.add(user)
     db.commit()

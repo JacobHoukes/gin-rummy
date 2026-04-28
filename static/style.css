@@ -341,6 +341,12 @@ button.danger:hover {
     font-weight: 600;
 }
 
+.auth-error--closed {
+    background: color-mix(in srgb, #6366f1 10%, var(--surface));
+    border-color: color-mix(in srgb, #6366f1 40%, var(--border));
+    color: #818cf8;
+}
+
 
 /* ============================================================
    8. LOBBY

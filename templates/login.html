@@ -56,8 +56,17 @@
 
 <main class="page">
 
-    {% if error %}
-    <div class="auth-error">{{ error }}</div>
+    {% if error == "registration_closed" %}
+    <div class="auth-error auth-error--closed">
+        This app is private and not open for public registration.
+    </div>
+    {% elif error %}
+    <div class="auth-error">
+        {% if error == "taken" %}That username is already taken.
+        {% elif error == "password_too_short" %}Password must be at least 6 characters.
+        {% elif error == "Invalid username or password" %}Invalid username or password.
+        {% else %}{{ error }}{% endif %}
+    </div>
     {% endif %}
 
     <div class="auth-cards">
@@ -110,6 +119,8 @@
             applyTheme(root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
         });
     }
+
+    applyTheme(localStorage.getItem('gr-theme') || 'dark');
 </script>
 
 </body>
