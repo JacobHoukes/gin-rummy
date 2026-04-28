@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gin Rummy</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<h1>♣ Gin Rummy ♠</h1>
+
+<!-- ── Lobby ── -->
+<div id="lobby">
+    <div>
+        <input id="nameInput" placeholder="Your name" />
+        <button onclick="createGame()">Create Game</button>
+    </div>
+    <div style="margin-top:16px">
+        <input id="joinCode" placeholder="Game code" />
+        <input id="joinName" placeholder="Your name" />
+        <button onclick="joinGame()">Join Game</button>
+    </div>
+</div>
+
+<!-- ── Game Board ── -->
+<div id="game">
+    <div id="scores"></div>
+    <div id="status"></div>
+
+    <div class="area-label">Piles</div>
+    <div class="piles">
+        <div>
+            <div class="stock-back" onclick="drawCard('stock')"></div>
+            <div class="pile-label">Stock (<span id="stockCount">0</span>)</div>
+        </div>
+        <div>
+            <div id="discardTop" class="pile-card" onclick="drawCard('discard')"></div>
+            <div class="pile-label">Discard</div>
+        </div>
+    </div>
+
+    <div class="area-label">Your Hand</div>
+    <div id="hand" class="card-row"></div>
+
+    <div id="actions">
+        <button id="btnDiscard" onclick="discardSelected()" disabled>Discard Selected</button>
+        <button id="btnKnock" onclick="openKnockModal()" disabled>Knock</button>
+    </div>
+
+    <div id="log"></div>
+</div>
+
+<!-- ── Knock Modal ── -->
+<div id="knockModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+     background:rgba(0,0,0,0.7); align-items:center; justify-content:center;">
+    <div style="background:#1a5c2a; padding:30px; border-radius:12px; max-width:500px; width:90%;">
+        <h2 style="margin-bottom:12px;">Declare Melds</h2>
+        <p style="opacity:0.8; font-size:0.9rem; margin-bottom:12px;">
+            Enter each meld as comma-separated cards (e.g. <code>AH,AS,AD</code>), one meld per line.
+        </p>
+        <textarea id="meldInput" rows="5" style="width:100%; border-radius:8px; padding:8px;
+            font-size:1rem; color:#000;"></textarea>
+        <div style="margin-top:12px; display:flex; gap:8px;">
+            <button onclick="submitKnock()">Confirm Knock</button>
+            <button onclick="closeKnockModal()" style="background:#888; color:#fff;">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ── State ──
+    let gameId = null;
+    let myPlayer = null;
+    let selectedCard = null;
+    let pollInterval = null;
+
+    const SUIT_SYMBOLS = { H: '♥', D: '♦', C: '♣', S: '♠' };
+    const RED_SUITS = ['H', 'D'];
+
+    // ── Card Rendering ──
+    function cardHTML(cardStr) {
+        const suit = cardStr.slice(-1);
+        const rank = cardStr.slice(0, -1);
+        const symbol = SUIT_SYMBOLS[suit];
+        const isRed = RED_SUITS.includes(suit);
+        const label = `${rank}${symbol}`;
+        return `
+            <div class="card ${isRed ? 'red' : ''}" onclick="selectCard('${cardStr}', this)">
+                <div class="top">${label}</div>
+                <div class="suit">${symbol}</div>
+                <div class="bottom">${label}</div>
+            </div>`;
+    }
+
+    function selectCard(cardStr, el) {
+        document.querySelectorAll('.card').forEach(c => c.classList.remove('selected'));
+        if (selectedCard === cardStr) {
+            selectedCard = null;
+        } else {
+            selectedCard = cardStr;
+            el.classList.add('selected');
+        }
+    }
+
+    // ── Lobby Actions ──
+    async function createGame() {
+        const name = document.getElementById('nameInput').value.trim();
+        if (!name) return alert('Enter your name');
+        const res = await fetch('/games', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ player1_name: name })
+        });
+        const data = await res.json();
+        gameId = data.game_id;
+        myPlayer = 'player1';
+        alert(`Game created! Share this code with your friend: ${gameId}`);
+        startGame(data.state);
+    }
+
+    async function joinGame() {
+        const code = document.getElementById('joinCode').value.trim();
+        const name = document.getElementById('joinName').value.trim();
+        if (!code || !name) return alert('Enter both the game code and your name');
+        const res = await fetch(`/games/${code}/join`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ player2_name: name })
+        });
+        if (!res.ok) return alert('Could not join — check the game code');
+        const data = await res.json();
+        gameId = code;
+        myPlayer = 'player2';
+        startGame(data.state);
+    }
+
+    // ── Game Start & Polling ──
+    function startGame(state) {
+        document.getElementById('lobby').style.display = 'none';
+        document.getElementById('game').style.display = 'block';
+        applyState(state);
+        pollInterval = setInterval(pollState, 3000);
+    }
+
+    async function pollState() {
+        const res = await fetch(`/games/${gameId}/state?player=${myPlayer}`);
+        const data = await res.json();
+        applyState(data.state);
+    }
+
+    // ── Apply State to UI ──
+    function applyState(state) {
+        // Scores
+        document.getElementById('scores').innerHTML =
+            `${state.player1_name}: <strong>${state.player1_score}</strong> pts &nbsp;|&nbsp;
+             ${state.player2_name || 'Waiting...'}: <strong>${state.player2_score}</strong> pts`;
+
+        // Status
+        const isMyTurn = state.current_turn === myPlayer;
+        let statusText = '';
+        if (state.phase === 'waiting') {
+            statusText = 'Waiting for opponent to join...';
+        } else if (state.phase === 'playing') {
+            statusText = isMyTurn ? '🟢 Your turn' : '⏳ Opponent\'s turn';
+        } else if (state.phase === 'scoring') {
+            statusText = `Hand over — knocked by ${state.knocked_by}`;
+        } else if (state.phase === 'finished') {
+            statusText = '🏆 Game over!';
+            clearInterval(pollInterval);
+        }
+        document.getElementById('status').textContent = statusText;
+
+        // Stock count
+        document.getElementById('stockCount').textContent = state.stock_count;
+
+        // Discard pile
+        const discardEl = document.getElementById('discardTop');
+        if (state.discard_top) {
+            const suit = state.discard_top.slice(-1);
+            const rank = state.discard_top.slice(0, -1);
+            const symbol = SUIT_SYMBOLS[suit];
+            const isRed = RED_SUITS.includes(suit);
+            discardEl.className = `pile-card ${isRed ? 'red' : ''}`;
+            discardEl.textContent = `${rank}${symbol}`;
+        } else {
+            discardEl.textContent = '—';
+        }
+
+        // Hand
+        document.getElementById('hand').innerHTML = state.your_hand.map(cardHTML).join('');
+        selectedCard = null;
+
+        // Buttons
+        document.getElementById('btnDiscard').disabled = !(isMyTurn && state.drawn_this_turn);
+        document.getElementById('btnKnock').disabled = !(isMyTurn && state.drawn_this_turn);
+    }
+
+    // ── Draw ──
+    async function drawCard(source) {
+        const res = await fetch(`/games/${gameId}/draw`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ player: myPlayer, source })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            applyState(data.state);
+            log(`You drew from the ${source}.`);
+        } else {
+            log(`⚠ ${data.detail}`);
+        }
+    }
+
+    // ── Discard ──
+    async function discardSelected() {
+        if (!selectedCard) return alert('Select a card to discard first');
+        const res = await fetch(`/games/${gameId}/discard`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ player: myPlayer, card: selectedCard })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            log(`You discarded ${selectedCard}.`);
+            applyState(data.state);
+        } else {
+            log(`⚠ ${data.detail}`);
+        }
+    }
+
+    // ── Knock ──
+    function openKnockModal() {
+        document.getElementById('knockModal').style.display = 'flex';
+    }
+
+    function closeKnockModal() {
+        document.getElementById('knockModal').style.display = 'none';
+    }
+
+    async function submitKnock() {
+        const raw = document.getElementById('meldInput').value.trim();
+        const melds = raw.length === 0 ? [] : raw.split('\n').map(line =>
+            line.split(',').map(c => c.trim().toUpperCase())
+        );
+        const res = await fetch(`/games/${gameId}/knock`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ player: myPlayer, melds, layoffs: [] })
+        });
+        const data = await res.json();
+        closeKnockModal();
+        if (res.ok) {
+            const msg = data.gin ? '🎉 GIN!' : data.undercut ? '😬 Undercut!' : '✊ Knocked!';
+            log(`${msg} ${data.points_scored} points scored by ${data.winner}.`);
+            applyState(data.state);
+        } else {
+            log(`⚠ ${data.detail}`);
+        }
+    }
+
+    // ── Log ──
+    function log(msg) {
+        const logEl = document.getElementById('log');
+        const p = document.createElement('p');
+        p.textContent = msg;
+        logEl.prepend(p);
+    }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,192 @@
+/* ── Reset & Base ── */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Segoe UI', sans-serif;
+    background: #1a5c2a;
+    color: #fff;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+}
+
+h1 {
+    font-size: 2rem;
+    margin-bottom: 20px;
+    letter-spacing: 2px;
+}
+
+/* ── Panels ── */
+#lobby, #game {
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 12px;
+    padding: 30px;
+    width: 100%;
+    max-width: 900px;
+}
+
+#game {
+    display: none;
+}
+
+/* ── Inputs & Buttons ── */
+input, button {
+    padding: 10px 16px;
+    border-radius: 8px;
+    border: none;
+    font-size: 1rem;
+    margin: 6px 4px;
+}
+
+input {
+    background: #fff;
+    color: #000;
+    width: 220px;
+}
+
+button {
+    background: #e8c84a;
+    color: #000;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+button:hover { background: #f0d96a; }
+button:disabled { background: #888; cursor: not-allowed; }
+
+/* ── Status & Scores ── */
+#status {
+    margin: 12px 0;
+    font-size: 1.1rem;
+    font-weight: bold;
+}
+
+#scores {
+    margin: 10px 0;
+    font-size: 1rem;
+}
+
+/* ── Area Labels ── */
+.area-label {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    opacity: 0.7;
+    margin: 14px 0 6px;
+}
+
+/* ── Card Row ── */
+.card-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 6px 0;
+}
+
+/* ── Cards ── */
+.card {
+    width: 60px;
+    height: 90px;
+    border-radius: 8px;
+    background: #fff;
+    color: #000;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 5px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    border: 3px solid transparent;
+    user-select: none;
+    transition: transform 0.1s, border-color 0.1s;
+}
+
+.card:hover { transform: translateY(-4px); }
+.card.selected { border-color: #e8c84a; transform: translateY(-8px); }
+.card.red { color: #c0392b; }
+
+.card .top { text-align: left; font-size: 0.8rem; }
+.card .suit { text-align: center; font-size: 1.4rem; }
+.card .bottom { text-align: right; font-size: 0.8rem; transform: rotate(180deg); }
+
+/* ── Pile Cards ── */
+.pile-card {
+    width: 60px;
+    height: 90px;
+    border-radius: 8px;
+    background: #fff;
+    color: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    font-weight: bold;
+    cursor: pointer;
+    border: 3px solid transparent;
+    transition: border-color 0.15s;
+}
+
+.pile-card:hover { border-color: #e8c84a; }
+.pile-card.red { color: #c0392b; }
+
+/* ── Stock Pile (face down) ── */
+.stock-back {
+    width: 60px;
+    height: 90px;
+    border-radius: 8px;
+    background: repeating-linear-gradient(
+        45deg, #1a3a8a, #1a3a8a 5px, #ffffff 5px, #ffffff 10px
+    );
+    cursor: pointer;
+    border: 3px solid transparent;
+    transition: border-color 0.15s;
+}
+
+.stock-back:hover { border-color: #e8c84a; }
+
+/* ── Piles Area ── */
+.piles {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    margin: 10px 0;
+}
+
+.pile-label {
+    font-size: 0.75rem;
+    text-align: center;
+    opacity: 0.8;
+    margin-top: 4px;
+}
+
+/* ── Action Buttons ── */
+#actions {
+    margin-top: 16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+/* ── Game Log ── */
+#log {
+    margin-top: 16px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    padding: 10px;
+    font-size: 0.85rem;
+    max-height: 120px;
+    overflow-y: auto;
+}
+
+#log p {
+    margin: 2px 0;
+    opacity: 0.85;
+}
