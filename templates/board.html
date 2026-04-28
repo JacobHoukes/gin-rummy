@@ -100,7 +100,9 @@
             </div>
             <div id="status">Waiting...</div>
             <div class="pile-group">
-                <div id="discardContainer"><div class="empty-pile">—</div></div>
+                <div id="discardContainer">
+                    <div class="empty-pile">—</div>
+                </div>
                 <div class="pile-label">Discard</div>
             </div>
         </div>
@@ -112,8 +114,7 @@
             </div>
             <div id="hand"></div>
             <div id="actions">
-                <button id="btnDiscard" class="accent" onclick="discardSelected()" disabled>Discard Selected</button>
-                <button id="btnKnock" onclick="openKnockModal()" disabled>Knock</button>
+                <button id="btnKnock" onclick="attemptKnock()" disabled>Knock</button>
             </div>
             <div id="log"></div>
         </div>
@@ -152,15 +153,13 @@
     </div>
 </div>
 
-<!-- ── Knock Modal ── -->
-<div id="knockModal" class="modal-overlay">
-    <div class="modal-box">
-        <h2>Declare Melds</h2>
-        <p>Enter each meld as comma-separated cards (e.g. <code>AH,AS,AD</code>), one meld per line.</p>
-        <textarea id="meldInput" rows="5"></textarea>
+<!-- ── Knock Result Modal ── -->
+<div id="knockResultModal" class="modal-overlay">
+    <div class="modal-box modal-box--wide">
+        <h2 id="knockResultTitle">Round Over</h2>
+        <div id="knockResultBody"></div>
         <div class="modal-actions">
-            <button class="accent" onclick="submitKnock()">Confirm Knock</button>
-            <button onclick="closeKnockModal()">Cancel</button>
+            <button class="accent" onclick="closeKnockResultModal()">OK</button>
         </div>
     </div>
 </div>
@@ -186,10 +185,12 @@
     }
 
     // ── State ──
-    let gameId   = null;
-    let myPlayer = null;
-    let selectedCard = null;
-    let pollInterval = null;
+    let gameId        = null;
+    let myPlayer      = null;
+    let pollInterval  = null;
+    let drawnThisTurn = false;
+    let isMyTurn      = false;
+    let isDragging    = false;
 
     // ── Modals ──
     function showErrorModal(msg) {
@@ -213,8 +214,60 @@
         });
     }
 
-    function openKnockModal()  { document.getElementById('knockModal').style.display = 'flex'; }
-    function closeKnockModal() { document.getElementById('knockModal').style.display = 'none'; }
+    function closeKnockResultModal() {
+        document.getElementById('knockResultModal').style.display = 'none';
+    }
+
+    function showKnockResult(data) {
+        const body = document.getElementById('knockResultBody');
+
+        let headline = '';
+        if (data.gin) headline = '🎉 GIN!';
+        else if (data.undercut) headline = '😬 Undercut!';
+        else headline = '✊ Knocked!';
+
+        const winnerName = data.winner === myPlayer
+            ? document.getElementById('yourName').textContent
+            : document.getElementById('opponentName').textContent;
+
+        body.innerHTML = `
+            <p class="knock-result-summary">${headline} <strong>${winnerName}</strong> wins this round — <strong>${data.points_scored} points</strong>.</p>
+            <div class="knock-result-hands">
+                <div class="knock-result-player">
+                    <div class="knock-result-label">Your hand</div>
+                    <div class="knock-result-sets">
+                        ${data.knocker_sets.map(set => `
+                            <div class="knock-result-set">
+                                ${set.map(c => `<img src="${cardImgUrl(c)}" class="knock-card" />`).join('')}
+                            </div>
+                        `).join('')}
+                    </div>
+                    ${data.knocker_deadwood.length ? `
+                        <div class="knock-result-deadwood-label">Deadwood (${data.knocker_deadwood_value} pts)</div>
+                        <div class="knock-result-set">
+                            ${data.knocker_deadwood.map(c => `<img src="${cardImgUrl(c)}" class="knock-card knock-card--dead" />`).join('')}
+                        </div>` : '<div class="knock-result-deadwood-label">No deadwood — Gin! 🎉</div>'}
+                </div>
+                <div class="knock-result-player">
+                    <div class="knock-result-label">Opponent's hand</div>
+                    <div class="knock-result-sets">
+                        ${data.opponent_sets.map(set => `
+                            <div class="knock-result-set">
+                                ${set.map(c => `<img src="${cardImgUrl(c)}" class="knock-card" />`).join('')}
+                            </div>
+                        `).join('')}
+                    </div>
+                    ${data.opponent_deadwood.length ? `
+                        <div class="knock-result-deadwood-label">Deadwood (${data.opponent_deadwood_value} pts)</div>
+                        <div class="knock-result-set">
+                            ${data.opponent_deadwood.map(c => `<img src="${cardImgUrl(c)}" class="knock-card knock-card--dead" />`).join('')}
+                        </div>` : '<div class="knock-result-deadwood-label">No deadwood!</div>'}
+                </div>
+            </div>
+        `;
+
+        document.getElementById('knockResultModal').style.display = 'flex';
+    }
 
     // ── Card Image URL ──
     function cardImgUrl(cardStr) {
@@ -224,7 +277,7 @@
         return `https://deckofcardsapi.com/static/img/${rank}${suit}.png`;
     }
 
-    // ── Render Your Hand ──
+    // ── Render Your Hand (with drag and drop) ──
     function renderHand(cards) {
         const handEl = document.getElementById('hand');
         handEl.innerHTML = '';
@@ -233,10 +286,21 @@
             img.src = cardImgUrl(card);
             img.alt = card;
             img.className = 'card-img';
-            img.onclick = () => selectCard(card, img);
+            img.draggable = true;
+            img.dataset.card = card;
+
+            img.addEventListener('dragstart', e => {
+                e.dataTransfer.setData('text/plain', card);
+                img.classList.add('dragging');
+                isDragging = true;
+            });
+            img.addEventListener('dragend', () => {
+                img.classList.remove('dragging');
+                setTimeout(() => isDragging = false, 100);
+            });
+
             handEl.appendChild(img);
         });
-        selectedCard = null;
     }
 
     // ── Render Opponent Hand ──
@@ -255,28 +319,47 @@
     // ── Render Discard ──
     function renderDiscard(cardStr) {
         const container = document.getElementById('discardContainer');
-        if (!cardStr) {
-            container.innerHTML = '<div class="empty-pile">—</div>';
-            return;
-        }
-        const img = document.createElement('img');
-        img.src = cardImgUrl(cardStr);
-        img.alt = cardStr;
-        img.className = 'pile-card-img';
-        img.onclick = () => drawCard('discard');
         container.innerHTML = '';
-        container.appendChild(img);
+        if (!cardStr) {
+            const empty = document.createElement('div');
+            empty.className = 'empty-pile';
+            empty.textContent = '—';
+            container.appendChild(empty);
+        } else {
+            const img = document.createElement('img');
+            img.src = cardImgUrl(cardStr);
+            img.alt = cardStr;
+            img.className = 'pile-card-img';
+            img.addEventListener('click', () => {
+                if (!isDragging) drawCard('discard');
+            });
+            container.appendChild(img);
+        }
+        setupDiscardDropZone();
     }
 
-    // ── Select Card ──
-    function selectCard(cardStr, el) {
-        document.querySelectorAll('.card-img').forEach(c => c.classList.remove('selected'));
-        if (selectedCard === cardStr) {
-            selectedCard = null;
-        } else {
-            selectedCard = cardStr;
-            el.classList.add('selected');
-        }
+    // ── Setup Discard Drop Zone ──
+    function setupDiscardDropZone() {
+        const container = document.getElementById('discardContainer');
+
+        container.addEventListener('dragover', e => {
+            if (!drawnThisTurn || !isMyTurn) return;
+            e.preventDefault();
+            container.classList.add('drag-over');
+        });
+
+        container.addEventListener('dragleave', () => {
+            container.classList.remove('drag-over');
+        });
+
+        container.addEventListener('drop', async e => {
+            e.preventDefault();
+            container.classList.remove('drag-over');
+            if (!drawnThisTurn || !isMyTurn) return;
+            const card = e.dataTransfer.getData('text/plain');
+            if (!card) return;
+            await discardCard(card);
+        });
     }
 
     // ── Lobby ──
@@ -317,6 +400,7 @@
         document.getElementById('lobby').style.display = 'none';
         document.getElementById('game').style.display = 'flex';
         applyState(state);
+        setupDiscardDropZone();
         pollInterval = setInterval(pollState, 3000);
     }
 
@@ -328,7 +412,8 @@
 
     // ── Apply State ──
     function applyState(state) {
-        const isMyTurn = state.current_turn === myPlayer;
+        isMyTurn = state.current_turn === myPlayer;
+        drawnThisTurn = state.drawn_this_turn;
 
         document.getElementById('yourName').textContent = myPlayer === 'player1'
             ? state.player1_name : (state.player2_name || 'You');
@@ -354,8 +439,7 @@
         renderHand(state.your_hand);
         renderOpponentHand(10);
 
-        document.getElementById('btnDiscard').disabled = !(isMyTurn && state.drawn_this_turn);
-        document.getElementById('btnKnock').disabled   = !(isMyTurn && state.drawn_this_turn);
+        document.getElementById('btnKnock').disabled = !(isMyTurn && state.drawn_this_turn);
     }
 
     // ── Draw ──
@@ -370,37 +454,34 @@
         else showErrorModal(data.detail);
     }
 
-    // ── Discard ──
-    async function discardSelected() {
-        if (!selectedCard) return showErrorModal('Select a card to discard first.');
+    // ── Discard (via drag) ──
+    async function discardCard(card) {
         const res = await fetch(`/games/${gameId}/discard`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ player: myPlayer, card: selectedCard })
+            body: JSON.stringify({ player: myPlayer, card })
         });
         const data = await res.json();
-        if (res.ok) { log(`You discarded ${selectedCard}.`); applyState(data.state); }
+        if (res.ok) { log(`You discarded ${card}.`); applyState(data.state); }
         else showErrorModal(data.detail);
     }
 
     // ── Knock ──
-    async function submitKnock() {
-        const raw = document.getElementById('meldInput').value.trim();
-        const melds = raw.length === 0 ? [] : raw.split('\n').map(line =>
-            line.split(',').map(c => c.trim().toUpperCase())
-        );
+    async function attemptKnock() {
         const res = await fetch(`/games/${gameId}/knock`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ player: myPlayer, melds, layoffs: [] })
+            body: JSON.stringify({ player: myPlayer, melds: [], layoffs: [] })
         });
         const data = await res.json();
-        closeKnockModal();
         if (res.ok) {
             const msg = data.gin ? '🎉 GIN!' : data.undercut ? '😬 Undercut!' : '✊ Knocked!';
             log(`${msg} ${data.points_scored} pts scored by ${data.winner}.`);
             applyState(data.state);
-        } else showErrorModal(data.detail);
+            showKnockResult(data);
+        } else {
+            showErrorModal(data.detail);
+        }
     }
 
     // ── Log ──

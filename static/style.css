@@ -713,3 +713,76 @@ button.danger:hover {
 .game-code-display button {
     flex-shrink: 0;
 }
+
+.modal-box--wide {
+    max-width: 720px;
+}
+
+.knock-result-summary {
+    font-size: 1rem;
+    margin-bottom: 20px;
+    color: var(--text);
+}
+
+.knock-result-hands {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+}
+
+.knock-result-player {
+    flex: 1;
+    min-width: 240px;
+}
+
+.knock-result-label {
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-bottom: 10px;
+}
+
+.knock-result-sets {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.knock-result-set {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.knock-card {
+    height: 70px;
+    width: auto;
+    border-radius: 4px;
+    box-shadow: var(--shadow-1);
+}
+
+.knock-card--dead {
+    opacity: 0.5;
+    filter: grayscale(40%);
+}
+
+.knock-result-deadwood-label {
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-bottom: 8px;
+}
+
+/* -- Drag and Drop -- */
+.card-img.dragging {
+    opacity: 0.4;
+    transform: scale(0.95);
+}
+
+#discardContainer.drag-over .pile-card-img,
+#discardContainer.drag-over .empty-pile {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--ring);
+}

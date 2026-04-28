@@ -3,7 +3,7 @@ import uuid
 from dotenv import load_dotenv
 
 from fastapi import FastAPI, Depends, HTTPException, Request, Form
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from database import Base, engine, get_db
 from models import Game, User
 from schemas import CreateGame, JoinGame, DrawCard, DiscardCard, KnockAction, GameState
-from game import build_deck, shuffle_deck, deal, is_valid_meld, hand_deadwood, is_gin
+from game import build_deck, shuffle_deck, deal, is_valid_meld, hand_deadwood, is_gin, find_best_melds, sort_hand
 from auth import hash_password, verify_password, create_session, get_current_user_id, get_session_payload, \
     SESSION_COOKIE
 
@@ -165,8 +165,7 @@ def change_username(request: Request, new_username: str = Form(), db: Session = 
         })
     user.username = new_username
     db.commit()
-    response = RedirectResponse("/account", status_code=302)
-    return response
+    return RedirectResponse("/account", status_code=302)
 
 
 @app.post("/account/password")
@@ -222,8 +221,8 @@ def create_game(body: CreateGame, request: Request, db: Session = Depends(get_db
         id=str(uuid.uuid4())[:6],
         player1_id=user_id,
         player1_name=body.player1_name,
-        player1_hand=p1_hand,
-        player2_hand=p2_hand,
+        player1_hand=sort_hand(p1_hand),
+        player2_hand=sort_hand(p2_hand),
         stock=stock,
         discard_pile=discard_pile,
         phase="waiting",
@@ -279,14 +278,14 @@ def draw_card(game_id: str, body: DrawCard, request: Request, db: Session = Depe
             raise HTTPException(status_code=400, detail="Stock is empty")
         stock = list(game.stock)
         card = stock.pop()
-        hand = list(hand) + [card]
+        hand = sort_hand(list(hand) + [card])
         game.stock = stock
     elif body.source == "discard":
         if not game.discard_pile:
             raise HTTPException(status_code=400, detail="Discard pile is empty")
         discard = list(game.discard_pile)
         card = discard.pop()
-        hand = list(hand) + [card]
+        hand = sort_hand(list(hand) + [card])
         game.discard_pile = discard
     else:
         raise HTTPException(status_code=400, detail="source must be 'stock' or 'discard'")
@@ -336,7 +335,7 @@ def discard_card(game_id: str, body: DiscardCard, request: Request, db: Session 
 
 @app.post("/games/{game_id}/knock")
 def knock(game_id: str, body: KnockAction, request: Request, db: Session = Depends(get_db)):
-    """This endpoint handles a logged-in player knocking, validates melds, and calculates the round score."""
+    """This endpoint handles knocking — auto-detects best sets, calculates score, and returns result for confirmation."""
     get_current_user_id(request)
     game = get_game_or_404(game_id, db)
     if game.phase != "playing":
@@ -346,22 +345,21 @@ def knock(game_id: str, body: KnockAction, request: Request, db: Session = Depen
     if not game.drawn_this_turn:
         raise HTTPException(status_code=400, detail="You must draw before knocking")
 
-    for meld in body.melds:
-        if not is_valid_meld(meld):
-            raise HTTPException(status_code=400, detail=f"Invalid meld: {meld}")
-
     knocker = body.player
     opponent = "player2" if knocker == "player1" else "player1"
     knocker_hand = list(game.player1_hand if knocker == "player1" else game.player2_hand)
     opponent_hand = list(game.player2_hand if knocker == "player1" else game.player1_hand)
 
-    knocker_deadwood = hand_deadwood(knocker_hand, body.melds)
-    if knocker_deadwood > 10:
-        raise HTTPException(status_code=400, detail="Deadwood too high to knock")
+    # Auto-detect best melds
+    best_melds, knocker_deadwood = find_best_melds(knocker_hand)
 
-    opponent_deadwood = hand_deadwood(opponent_hand, [])
+    if knocker_deadwood > 10:
+        raise HTTPException(status_code=400,
+                            detail=f"Your deadwood is {knocker_deadwood} — you need 10 or fewer to knock.")
+
+    opponent_best_melds, opponent_deadwood = find_best_melds(opponent_hand)
     difference = opponent_deadwood - knocker_deadwood
-    gin = is_gin(knocker_hand, body.melds)
+    gin = knocker_deadwood == 0
     undercut = False
 
     if gin:
@@ -385,10 +383,23 @@ def knock(game_id: str, body: KnockAction, request: Request, db: Session = Depen
     game.current_turn = None
     db.commit()
     db.refresh(game)
+
+    # Build deadwood lists
+    knocker_melded = {c for meld in best_melds for c in meld}
+    knocker_deadwood_cards = [c for c in knocker_hand if c not in knocker_melded]
+    opponent_melded = {c for meld in opponent_best_melds for c in meld}
+    opponent_deadwood_cards = [c for c in opponent_hand if c not in opponent_melded]
+
     return {
         "state": build_game_state(game, knocker),
         "points_scored": points,
         "gin": gin,
         "undercut": undercut,
-        "winner": winner
+        "winner": winner,
+        "knocker_sets": best_melds,
+        "knocker_deadwood": knocker_deadwood_cards,
+        "opponent_sets": opponent_best_melds,
+        "opponent_deadwood": opponent_deadwood_cards,
+        "knocker_deadwood_value": knocker_deadwood,
+        "opponent_deadwood_value": opponent_deadwood,
     }
