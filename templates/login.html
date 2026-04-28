@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gin Rummy — Login</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<div class="app-header">
+    <h1>♣ Gin <span>Rummy</span> ♠</h1>
+    <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">🌙</button>
+</div>
+
+<div id="lobby">
+
+    {% if error %}
+    <div style="margin-bottom: 16px; padding: 10px 14px; border-radius: var(--radius-md);
+                background: color-mix(in srgb, #ef4444 10%, var(--surface));
+                border: 1px solid color-mix(in srgb, #ef4444 40%, var(--border));
+                color: #ef4444; font-size: 0.875rem; font-weight: 600;">
+        {{ error }}
+    </div>
+    {% endif %}
+
+    <div class="lobby-section">
+        <h2>Login</h2>
+        <form method="post" action="/login">
+            <div class="lobby-row" style="flex-direction: column; gap: 10px;">
+                <input name="username" placeholder="Username" required autocomplete="username" />
+                <input name="password" type="password" placeholder="Password" required autocomplete="current-password" />
+                <button type="submit" class="accent">Login</button>
+            </div>
+        </form>
+    </div>
+
+    <hr class="lobby-divider">
+
+    <div class="lobby-section">
+        <h2>New here? Register</h2>
+        <form method="post" action="/register">
+            <div class="lobby-row" style="flex-direction: column; gap: 10px;">
+                <input name="username" placeholder="Choose a username" required autocomplete="username" />
+                <input name="password" type="password" placeholder="Choose a password" required autocomplete="new-password" />
+                <button type="submit" class="accent">Register</button>
+            </div>
+        </form>
+    </div>
+
+</div>
+
+<script>
+    const html = document.documentElement;
+    const toggleBtn = document.querySelector('.theme-toggle');
+
+    function applyTheme(theme) {
+        html.setAttribute('data-theme', theme);
+        toggleBtn.textContent = theme === 'dark' ? '🌙' : '☀️';
+        localStorage.setItem('gr-theme', theme);
+    }
+
+    function toggleTheme() {
+        applyTheme(html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+    }
+
+    applyTheme(localStorage.getItem('gr-theme') || 'dark');
+</script>
+
+</body>
+</html>
