@@ -249,7 +249,7 @@
                         </div>` : '<div class="knock-result-deadwood-label">No deadwood — Gin! 🎉</div>'}
                 </div>
                 <div class="knock-result-player">
-                    <div class="knock-result-label">Opponent's hand</div>
+                    <div class="knock-result-label">Opponent\'s hand</div>
                     <div class="knock-result-sets">
                         ${data.opponent_sets.map(set => `
                             <div class="knock-result-set">
@@ -277,7 +277,7 @@
         return `https://deckofcardsapi.com/static/img/${rank}${suit}.png`;
     }
 
-    // ── Render Your Hand (with drag and drop) ──
+    // ── Render Your Hand ──
     function renderHand(cards) {
         const handEl = document.getElementById('hand');
         handEl.innerHTML = '';
@@ -335,10 +335,9 @@
             });
             container.appendChild(img);
         }
-        setupDiscardDropZone();
     }
 
-    // ── Setup Discard Drop Zone ──
+    // ── Setup Discard Drop Zone (called once) ──
     function setupDiscardDropZone() {
         const container = document.getElementById('discardContainer');
 
@@ -399,8 +398,8 @@
     function startGame(state) {
         document.getElementById('lobby').style.display = 'none';
         document.getElementById('game').style.display = 'flex';
-        applyState(state);
         setupDiscardDropZone();
+        applyState(state);
         pollInterval = setInterval(pollState, 3000);
     }
 
