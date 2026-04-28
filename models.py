@@ -8,6 +8,7 @@ class User(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     username = Column(String, unique=True, nullable=False)
     password_hash = Column(String, nullable=False)
+    session_version = Column(Integer, default=0, nullable=False)
 
 
 class Game(Base):

@@ -83,6 +83,7 @@ h1 span { color: var(--accent); }
     font-weight: 800;
     letter-spacing: -0.02em;
     color: var(--text);
+    text-decoration: none;
 }
 
 
@@ -209,6 +210,12 @@ button.danger:hover {
     font-size: 0.85rem;
     font-weight: 600;
     color: var(--muted);
+    text-decoration: none;
+    transition: color var(--transition);
+}
+
+.topbar-username:hover {
+    color: var(--accent);
 }
 
 .icon-button {
@@ -285,9 +292,10 @@ button.danger:hover {
 
 
 /* ============================================================
-   7. AUTH
+   7. AUTH & ACCOUNT
    ============================================================ */
-.auth-cards {
+.auth-cards,
+.account-cards {
     display: flex;
     flex-direction: column;
     gap: 24px;
@@ -345,6 +353,22 @@ button.danger:hover {
     background: color-mix(in srgb, #850312 10%, var(--surface));
     border-color: color-mix(in srgb, #850312 40%, var(--border));
     color: #850312;
+}
+
+.auth-success {
+    padding: 10px 14px;
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, #10b981 10%, var(--surface));
+    border: 1px solid color-mix(in srgb, #10b981 40%, var(--border));
+    color: #10b981;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.account-description {
+    font-size: 0.875rem;
+    color: var(--muted);
+    margin-bottom: 16px;
 }
 
 

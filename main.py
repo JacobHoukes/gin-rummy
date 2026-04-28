@@ -12,7 +12,8 @@ from database import Base, engine, get_db
 from models import Game, User
 from schemas import CreateGame, JoinGame, DrawCard, DiscardCard, KnockAction, GameState
 from game import build_deck, shuffle_deck, deal, is_valid_meld, hand_deadwood, is_gin
-from auth import hash_password, verify_password, create_session, get_current_user_id, SESSION_COOKIE
+from auth import hash_password, verify_password, create_session, get_current_user_id, get_session_payload, \
+    SESSION_COOKIE
 
 load_dotenv()
 
@@ -53,6 +54,11 @@ def build_game_state(game: Game, player: str) -> GameState:
     )
 
 
+def get_allowed_usernames():
+    """This function returns the list of allowed usernames from the environment variable."""
+    return [u.strip().lower() for u in os.getenv("ALLOWED_USERNAMES", "").split(",")]
+
+
 # ── Auth Routes ──
 
 @app.get("/")
@@ -82,7 +88,7 @@ def login(request: Request, username: str = Form(), password: str = Form(), db: 
     if not user or not verify_password(password, user.password_hash):
         return templates.TemplateResponse(request, "login.html", {"error": "Invalid username or password"})
     response = RedirectResponse("/board", status_code=302)
-    response.set_cookie(SESSION_COOKIE, create_session(user.id), httponly=True, samesite="lax",
+    response.set_cookie(SESSION_COOKIE, create_session(user.id, user.session_version), httponly=True, samesite="lax",
                         max_age=60 * 60 * 24 * 7)
     return response
 
@@ -90,11 +96,8 @@ def login(request: Request, username: str = Form(), password: str = Form(), db: 
 @app.post("/register")
 def register(request: Request, username: str = Form(), password: str = Form(), db: Session = Depends(get_db)):
     """This endpoint creates a new user account if the username is on the allowed list, and logs them in immediately."""
-    allowed = [u.strip().lower() for u in os.getenv("ALLOWED_USERNAMES", "").split(",")]
-    if username.lower() not in allowed:
-        return templates.TemplateResponse(request, "login.html", {
-            "error": "registration_closed"
-        })
+    if username.lower() not in get_allowed_usernames():
+        return templates.TemplateResponse(request, "login.html", {"error": "registration_closed"})
     if db.query(User).filter(User.username == username).first():
         return templates.TemplateResponse(request, "login.html", {"error": "taken"})
     if len(password) < 6:
@@ -104,7 +107,7 @@ def register(request: Request, username: str = Form(), password: str = Form(), d
     db.commit()
     db.refresh(user)
     response = RedirectResponse("/board", status_code=302)
-    response.set_cookie(SESSION_COOKIE, create_session(user.id), httponly=True, samesite="lax",
+    response.set_cookie(SESSION_COOKIE, create_session(user.id, user.session_version), httponly=True, samesite="lax",
                         max_age=60 * 60 * 24 * 7)
     return response
 
@@ -120,9 +123,90 @@ def logout():
 @app.get("/board")
 def board(request: Request, db: Session = Depends(get_db)):
     """This endpoint serves the game board — only accessible to logged-in users."""
-    user_id = get_current_user_id(request)
-    user = db.query(User).filter(User.id == user_id).first()
+    payload = get_session_payload(request)
+    user = db.query(User).filter(User.id == payload["id"]).first()
+    if not user or user.session_version != payload["v"]:
+        response = RedirectResponse("/login", status_code=302)
+        response.delete_cookie(SESSION_COOKIE)
+        return response
     return templates.TemplateResponse(request, "board.html", {"username": user.username})
+
+
+# ── Account Routes ──
+
+@app.get("/account")
+def account_page(request: Request, db: Session = Depends(get_db)):
+    """This endpoint serves the account settings page."""
+    payload = get_session_payload(request)
+    user = db.query(User).filter(User.id == payload["id"]).first()
+    if not user or user.session_version != payload["v"]:
+        response = RedirectResponse("/login", status_code=302)
+        response.delete_cookie(SESSION_COOKIE)
+        return response
+    return templates.TemplateResponse(request, "account.html", {"username": user.username})
+
+
+@app.post("/account/username")
+def change_username(request: Request, new_username: str = Form(), db: Session = Depends(get_db)):
+    """This endpoint updates the logged-in user's username if it is on the allowed list."""
+    payload = get_session_payload(request)
+    user = db.query(User).filter(User.id == payload["id"]).first()
+    if not user or user.session_version != payload["v"]:
+        return RedirectResponse("/login", status_code=302)
+    if new_username.lower() not in get_allowed_usernames():
+        return templates.TemplateResponse(request, "account.html", {
+            "username": user.username,
+            "username_error": "That username is not on the allowed list."
+        })
+    if db.query(User).filter(User.username == new_username).first():
+        return templates.TemplateResponse(request, "account.html", {
+            "username": user.username,
+            "username_error": "That username is already taken."
+        })
+    user.username = new_username
+    db.commit()
+    response = RedirectResponse("/account", status_code=302)
+    return response
+
+
+@app.post("/account/password")
+def change_password(request: Request, current_password: str = Form(), new_password: str = Form(),
+                    db: Session = Depends(get_db)):
+    """This endpoint updates the logged-in user's password after verifying their current password."""
+    payload = get_session_payload(request)
+    user = db.query(User).filter(User.id == payload["id"]).first()
+    if not user or user.session_version != payload["v"]:
+        return RedirectResponse("/login", status_code=302)
+    if not verify_password(current_password, user.password_hash):
+        return templates.TemplateResponse(request, "account.html", {
+            "username": user.username,
+            "password_error": "Current password is incorrect."
+        })
+    if len(new_password) < 6:
+        return templates.TemplateResponse(request, "account.html", {
+            "username": user.username,
+            "password_error": "New password must be at least 6 characters."
+        })
+    user.password_hash = hash_password(new_password)
+    db.commit()
+    return templates.TemplateResponse(request, "account.html", {
+        "username": user.username,
+        "password_success": "Password updated successfully."
+    })
+
+
+@app.post("/account/logout-all")
+def logout_all(request: Request, db: Session = Depends(get_db)):
+    """This endpoint increments the session version, invalidating all existing sessions for this user."""
+    payload = get_session_payload(request)
+    user = db.query(User).filter(User.id == payload["id"]).first()
+    if not user:
+        return RedirectResponse("/login", status_code=302)
+    user.session_version += 1
+    db.commit()
+    response = RedirectResponse("/login", status_code=302)
+    response.delete_cookie(SESSION_COOKIE)
+    return response
 
 
 # ── Game Routes ──

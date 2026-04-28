@@ -19,13 +19,13 @@ def verify_password(plain: str, hashed: str) -> bool:
     return bcrypt.checkpw(plain.encode(), hashed.encode())
 
 
-def create_session(user_id: int) -> str:
-    """This function creates a signed session token containing the user's ID and returns it as a string."""
-    return serializer.dumps(user_id)
+def create_session(user_id: int, session_version: int) -> str:
+    """This function creates a signed session token containing the user ID and session version."""
+    return serializer.dumps({"id": user_id, "v": session_version})
 
 
-def decode_session(token: str) -> int:
-    """This function decodes a signed session token and returns the user ID, or raises an exception if invalid or expired."""
+def decode_session(token: str) -> dict:
+    """This function decodes a signed session token and returns the payload, or raises a 401 if invalid or expired."""
     try:
         return serializer.loads(token, max_age=60 * 60 * 24 * 7)
     except Exception:
@@ -33,7 +33,16 @@ def decode_session(token: str) -> int:
 
 
 def get_current_user_id(request: Request) -> int:
-    """This function reads the session cookie from the request and returns the logged-in user's ID, or raises a 401 if not logged in."""
+    """This function reads the session cookie and returns the user ID, or raises a 401 if not logged in."""
+    token = request.cookies.get(SESSION_COOKIE)
+    if not token:
+        raise HTTPException(status_code=401, detail="Not logged in")
+    payload = decode_session(token)
+    return payload["id"]
+
+
+def get_session_payload(request: Request) -> dict:
+    """This function reads the session cookie and returns the full payload including session version."""
     token = request.cookies.get(SESSION_COOKIE)
     if not token:
         raise HTTPException(status_code=401, detail="Not logged in")

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gin Rummy — Account</title>
+
+    <style id="critical-theme">
+        html, body { background: #021a0f; min-height: 100%; }
+    </style>
+
+    <script>
+        (function() {
+            try {
+                var stored = localStorage.getItem('gr-theme');
+                var theme = stored || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+                document.documentElement.setAttribute('data-theme', theme);
+                var sheet = document.getElementById('critical-theme');
+                if (sheet) sheet.textContent = theme === 'dark'
+                    ? 'html,body{background:#021a0f;min-height:100%;}'
+                    : 'html,body{background:#bcc0c4;min-height:100%;}';
+            } catch(_) {}
+        })();
+    </script>
+
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<header class="topbar">
+    <div class="topbar-inner">
+        <a href="/board" class="brand-name">Gin Rummy</a>
+        <div class="topbar-actions">
+            <span class="topbar-username">{{ username }}</span>
+            <a href="/logout"><button class="danger">Logout</button></a>
+            <button id="theme-toggle" class="icon-button" type="button" title="Toggle theme">
+                <span class="theme-svg-icon">
+                    <svg viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="5"/>
+                        <line x1="12" y1="1"  x2="12" y2="3"/>
+                        <line x1="12" y1="21" x2="12" y2="23"/>
+                        <line x1="4.22"  y1="4.22"  x2="5.64"  y2="5.64"/>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                        <line x1="1"  y1="12" x2="3"  y2="12"/>
+                        <line x1="21" y1="12" x2="23" y2="12"/>
+                        <line x1="4.22"  y1="19.78" x2="5.64"  y2="18.36"/>
+                        <line x1="18.36" y1="5.64"  x2="19.78" y2="4.22"/>
+                    </svg>
+                </span>
+                <span class="theme-separator">/</span>
+                <span class="theme-svg-icon">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                    </svg>
+                </span>
+            </button>
+        </div>
+    </div>
+</header>
+
+<main class="page">
+
+    <div class="account-cards">
+
+        <!-- Change Username -->
+        <div class="auth-card">
+            <h2 class="auth-section-title">Change Username</h2>
+            {% if username_error %}
+            <div class="auth-error" style="margin-bottom: 16px;">{{ username_error }}</div>
+            {% endif %}
+            <form method="post" action="/account/username">
+                <div class="auth-form">
+                    <input name="new_username" placeholder="New username" required autocomplete="username" />
+                    <button type="submit" class="accent">Update Username</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Change Password -->
+        <div class="auth-card">
+            <h2 class="auth-section-title">Change Password</h2>
+            {% if password_error %}
+            <div class="auth-error" style="margin-bottom: 16px;">{{ password_error }}</div>
+            {% endif %}
+            {% if password_success %}
+            <div class="auth-success" style="margin-bottom: 16px;">{{ password_success }}</div>
+            {% endif %}
+            <form method="post" action="/account/password">
+                <div class="auth-form">
+                    <input name="current_password" type="password" placeholder="Current password" required autocomplete="current-password" />
+                    <input name="new_password" type="password" placeholder="New password" required autocomplete="new-password" />
+                    <button type="submit" class="accent">Update Password</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Logout All Devices -->
+        <div class="auth-card">
+            <h2 class="auth-section-title">Sessions</h2>
+            <p class="account-description">This will log you out of all devices, including this one.</p>
+            <form method="post" action="/account/logout-all">
+                <button type="submit" class="danger">Logout of All Devices</button>
+            </form>
+        </div>
+
+    </div>
+
+</main>
+
+<footer class="footer">
+    <p class="footer-copy">Gin Rummy &copy; 2026</p>
+</footer>
+
+<script>
+    const root = document.documentElement;
+    const toggleBtn = document.getElementById('theme-toggle');
+
+    function applyTheme(theme) {
+        root.setAttribute('data-theme', theme);
+        try { localStorage.setItem('gr-theme', theme); } catch(_) {}
+        const sheet = document.getElementById('critical-theme');
+        if (sheet) sheet.textContent = theme === 'dark'
+            ? 'html,body{background:#021a0f;min-height:100%;}'
+            : 'html,body{background:#bcc0c4;min-height:100%;}';
+    }
+
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', () => {
+            applyTheme(root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+        });
+    }
+
+    applyTheme(localStorage.getItem('gr-theme') || 'dark');
+</script>
+
+</body>
+</html>
