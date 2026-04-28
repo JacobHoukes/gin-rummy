@@ -618,6 +618,12 @@ button.danger:hover {
     font-size: 1.4rem;
 }
 
+.card-img.card-new {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--ring), var(--shadow-2);
+    transform: translateY(-10px);
+}
+
 
 /* ============================================================
    11. MODALS
