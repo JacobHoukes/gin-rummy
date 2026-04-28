@@ -114,6 +114,8 @@
             </div>
             <div id="hand"></div>
             <div id="actions">
+                <button onclick="sortHandBySuit()">Sort by Suit</button>
+                <button onclick="sortHandByValue()">Sort by Value</button>
                 <button id="btnKnock" onclick="attemptKnock()" disabled>Knock</button>
             </div>
             <div id="log"></div>
@@ -191,6 +193,12 @@
     let drawnThisTurn = false;
     let isMyTurn      = false;
     let isDragging    = false;
+
+    // ── Card helpers ──
+    const SUIT_ORDER = { H: 0, D: 1, C: 2, S: 3 };
+    const RANK_ORDER = { A: 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, J: 11, Q: 12, K: 13 };
+    const getCardRank = card => RANK_ORDER[card.slice(0, -1)];
+    const getCardSuit = card => card.slice(-1);
 
     // ── Modals ──
     function showErrorModal(msg) {
@@ -277,8 +285,8 @@
         return `https://deckofcardsapi.com/static/img/${rank}${suit}.png`;
     }
 
-    // ── Render Your Hand ──
-    function renderHand(cards) {
+    // ── Render Hand from array ──
+    function renderHandFromArray(cards) {
         const handEl = document.getElementById('hand');
         handEl.innerHTML = '';
         cards.forEach(card => {
@@ -301,6 +309,27 @@
 
             handEl.appendChild(img);
         });
+    }
+
+    // ── Render Your Hand ──
+    function renderHand(cards) {
+        renderHandFromArray(cards);
+    }
+
+    // ── Sort Buttons ──
+    function sortHandBySuit() {
+        const cards = [...document.getElementById('hand').querySelectorAll('.card-img')].map(img => img.dataset.card);
+        const sorted = [...cards].sort((a, b) =>
+            SUIT_ORDER[getCardSuit(a)] - SUIT_ORDER[getCardSuit(b)] ||
+            getCardRank(a) - getCardRank(b)
+        );
+        renderHandFromArray(sorted);
+    }
+
+    function sortHandByValue() {
+        const cards = [...document.getElementById('hand').querySelectorAll('.card-img')].map(img => img.dataset.card);
+        const sorted = [...cards].sort((a, b) => getCardRank(a) - getCardRank(b));
+        renderHandFromArray(sorted);
     }
 
     // ── Render Opponent Hand ──
@@ -475,7 +504,10 @@
         const data = await res.json();
         if (res.ok) {
             const msg = data.gin ? '🎉 GIN!' : data.undercut ? '😬 Undercut!' : '✊ Knocked!';
-            log(`${msg} ${data.points_scored} pts scored by ${data.winner}.`);
+            const winnerName = data.winner === myPlayer
+                ? document.getElementById('yourName').textContent
+                : document.getElementById('opponentName').textContent;
+            log(`${msg} ${data.points_scored} pts scored by ${winnerName}.`);
             applyState(data.state);
             showKnockResult(data);
         } else {
