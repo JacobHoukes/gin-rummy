@@ -1,13 +1,15 @@
 import uuid
-from fastapi import FastAPI, Depends, HTTPException, Request
+from fastapi import FastAPI, Depends, HTTPException, Request, Form
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from database import Base, engine, get_db
-from models import Game
+from models import Game, User
 from schemas import CreateGame, JoinGame, DrawCard, DiscardCard, KnockAction, GameState
-from game import build_deck, shuffle_deck, deal, card_value, is_valid_meld, hand_deadwood, is_gin
+from game import build_deck, shuffle_deck, deal, is_valid_meld, hand_deadwood, is_gin
+from auth import hash_password, verify_password, create_session, get_current_user_id, SESSION_COOKIE
 
 Base.metadata.create_all(bind=engine)
 
@@ -15,6 +17,8 @@ app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
+
+# ── Helpers ──
 
 def get_game_or_404(game_id: str, db: Session) -> Game:
     """This function fetches a game by ID from the database and raises a 404 error if it does not exist."""
@@ -44,20 +48,85 @@ def build_game_state(game: Game, player: str) -> GameState:
     )
 
 
-@app.get("/")
-def lobby(request: Request):
-    """This endpoint serves the main game board HTML page via Jinja2."""
-    return templates.TemplateResponse(request, "board.html")
+# ── Auth Routes ──
 
+@app.get("/")
+def root(request: Request):
+    """This endpoint redirects logged-in users to the game board and everyone else to the login page."""
+    token = request.cookies.get(SESSION_COOKIE)
+    if token:
+        try:
+            from auth import decode_session
+            decode_session(token)
+            return RedirectResponse("/board", status_code=302)
+        except Exception:
+            pass
+    return RedirectResponse("/login", status_code=302)
+
+
+@app.get("/login")
+def login_page(request: Request, error: str = None):
+    """This endpoint serves the login and registration page."""
+    return templates.TemplateResponse(request, "login.html", {"error": error})
+
+
+@app.post("/login")
+def login(request: Request, username: str = Form(), password: str = Form(), db: Session = Depends(get_db)):
+    """This endpoint validates login credentials and sets a session cookie if correct."""
+    user = db.query(User).filter(User.username == username).first()
+    if not user or not verify_password(password, user.password_hash):
+        return templates.TemplateResponse(request, "login.html", {"error": "Invalid username or password"})
+    response = RedirectResponse("/board", status_code=302)
+    response.set_cookie(SESSION_COOKIE, create_session(user.id), httponly=True, samesite="lax",
+                        max_age=60 * 60 * 24 * 7)
+    return response
+
+
+@app.post("/register")
+def register(request: Request, username: str = Form(), password: str = Form(), db: Session = Depends(get_db)):
+    """This endpoint creates a new user account and logs them in immediately."""
+    if db.query(User).filter(User.username == username).first():
+        return templates.TemplateResponse(request, "login.html", {"error": f"Username '{username}' is already taken"})
+    if len(password) < 6:
+        return templates.TemplateResponse(request, "login.html", {"error": "Password must be at least 6 characters"})
+    user = User(username=username, password_hash=hash_password(password))
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    response = RedirectResponse("/board", status_code=302)
+    response.set_cookie(SESSION_COOKIE, create_session(user.id), httponly=True, samesite="lax",
+                        max_age=60 * 60 * 24 * 7)
+    return response
+
+
+@app.get("/logout")
+def logout():
+    """This endpoint clears the session cookie and redirects to the login page."""
+    response = RedirectResponse("/login", status_code=302)
+    response.delete_cookie(SESSION_COOKIE)
+    return response
+
+
+@app.get("/board")
+def board(request: Request, db: Session = Depends(get_db)):
+    """This endpoint serves the game board — only accessible to logged-in users."""
+    user_id = get_current_user_id(request)
+    user = db.query(User).filter(User.id == user_id).first()
+    return templates.TemplateResponse(request, "board.html", {"username": user.username})
+
+
+# ── Game Routes ──
 
 @app.post("/games")
-def create_game(body: CreateGame, db: Session = Depends(get_db)):
-    """This endpoint creates a new game, deals the cards, and returns the game ID and initial state for player1."""
+def create_game(body: CreateGame, request: Request, db: Session = Depends(get_db)):
+    """This endpoint creates a new game for the logged-in user and returns the game ID and initial state."""
+    user_id = get_current_user_id(request)
     deck = shuffle_deck(build_deck())
     p1_hand, p2_hand, stock = deal(deck)
     discard_pile = [stock.pop()]
     game = Game(
         id=str(uuid.uuid4())[:6],
+        player1_id=user_id,
         player1_name=body.player1_name,
         player1_hand=p1_hand,
         player2_hand=p2_hand,
@@ -72,11 +141,15 @@ def create_game(body: CreateGame, db: Session = Depends(get_db)):
 
 
 @app.post("/games/{game_id}/join")
-def join_game(game_id: str, body: JoinGame, db: Session = Depends(get_db)):
-    """This endpoint allows player2 to join a waiting game using the game code, transitioning the game to playing phase."""
+def join_game(game_id: str, body: JoinGame, request: Request, db: Session = Depends(get_db)):
+    """This endpoint allows a logged-in user to join a waiting game using the game code."""
+    user_id = get_current_user_id(request)
     game = get_game_or_404(game_id, db)
     if game.phase != "waiting":
         raise HTTPException(status_code=400, detail="Game already started")
+    if game.player1_id == user_id:
+        raise HTTPException(status_code=400, detail="You cannot join your own game")
+    game.player2_id = user_id
     game.player2_name = body.player2_name
     game.phase = "playing"
     game.current_turn = "player1"
@@ -86,15 +159,17 @@ def join_game(game_id: str, body: JoinGame, db: Session = Depends(get_db)):
 
 
 @app.get("/games/{game_id}/state")
-def get_state(game_id: str, player: str, db: Session = Depends(get_db)):
-    """This endpoint returns the current game state for the given player — used by the frontend to poll for updates."""
+def get_state(game_id: str, player: str, request: Request, db: Session = Depends(get_db)):
+    """This endpoint returns the current game state for the logged-in player."""
+    get_current_user_id(request)
     game = get_game_or_404(game_id, db)
     return {"state": build_game_state(game, player)}
 
 
 @app.post("/games/{game_id}/draw")
-def draw_card(game_id: str, body: DrawCard, db: Session = Depends(get_db)):
-    """This endpoint handles a player drawing a card from either the stock pile or the discard pile."""
+def draw_card(game_id: str, body: DrawCard, request: Request, db: Session = Depends(get_db)):
+    """This endpoint handles a logged-in player drawing a card from either the stock or discard pile."""
+    get_current_user_id(request)
     game = get_game_or_404(game_id, db)
     if game.phase != "playing":
         raise HTTPException(status_code=400, detail="Game is not in playing phase")
@@ -134,8 +209,9 @@ def draw_card(game_id: str, body: DrawCard, db: Session = Depends(get_db)):
 
 
 @app.post("/games/{game_id}/discard")
-def discard_card(game_id: str, body: DiscardCard, db: Session = Depends(get_db)):
-    """This endpoint handles a player discarding a card from their hand, then passes the turn to the opponent."""
+def discard_card(game_id: str, body: DiscardCard, request: Request, db: Session = Depends(get_db)):
+    """This endpoint handles a logged-in player discarding a card and passing the turn."""
+    get_current_user_id(request)
     game = get_game_or_404(game_id, db)
     if game.phase != "playing":
         raise HTTPException(status_code=400, detail="Game is not in playing phase")
@@ -145,7 +221,6 @@ def discard_card(game_id: str, body: DiscardCard, db: Session = Depends(get_db))
         raise HTTPException(status_code=400, detail="You must draw before discarding")
 
     hand = list(game.player1_hand if body.player == "player1" else game.player2_hand)
-
     if body.card not in hand:
         raise HTTPException(status_code=400, detail="Card not in your hand")
 
@@ -166,8 +241,9 @@ def discard_card(game_id: str, body: DiscardCard, db: Session = Depends(get_db))
 
 
 @app.post("/games/{game_id}/knock")
-def knock(game_id: str, body: KnockAction, db: Session = Depends(get_db)):
-    """This endpoint handles a player knocking, validates their melds, calculates scores, and determines the round winner."""
+def knock(game_id: str, body: KnockAction, request: Request, db: Session = Depends(get_db)):
+    """This endpoint handles a logged-in player knocking, validates melds, and calculates the round score."""
+    get_current_user_id(request)
     game = get_game_or_404(game_id, db)
     if game.phase != "playing":
         raise HTTPException(status_code=400, detail="Game is not in playing phase")
