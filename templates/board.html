@@ -62,9 +62,8 @@
 <!-- ── Main ── -->
 <main class="page">
 
-    <!-- Lobby Panel -->
+    <!-- Lobby -->
     <div id="lobby" class="lobby-cards">
-
         <div class="lobby-card">
             <h2>Create a new game</h2>
             <div class="lobby-row">
@@ -72,7 +71,6 @@
                 <button class="accent" onclick="createGame()">Create Game</button>
             </div>
         </div>
-
         <div class="lobby-card">
             <h2>Join existing game</h2>
             <div class="lobby-row">
@@ -81,12 +79,10 @@
                 <button class="accent" onclick="joinGame()">Join Game</button>
             </div>
         </div>
-
     </div>
 
     <!-- Game Table -->
     <div id="game">
-
         <div id="opponent-zone">
             <div class="zone-header">
                 <span class="zone-name" id="opponentName">Opponent</span>
@@ -97,18 +93,14 @@
 
         <div id="table-center">
             <div class="pile-group">
-                <img id="stockImg" class="stock-back"
+                <img class="stock-back"
                      src="https://deckofcardsapi.com/static/img/back.png"
                      alt="Stock" onclick="drawCard('stock')" />
                 <div class="pile-label">Stock (<span id="stockCount">0</span>)</div>
             </div>
-
             <div id="status">Waiting...</div>
-
             <div class="pile-group">
-                <div id="discardContainer">
-                    <div class="empty-pile">—</div>
-                </div>
+                <div id="discardContainer"><div class="empty-pile">—</div></div>
                 <div class="pile-label">Discard</div>
             </div>
         </div>
@@ -125,7 +117,6 @@
             </div>
             <div id="log"></div>
         </div>
-
     </div>
 
 </main>
@@ -136,7 +127,7 @@
 </footer>
 
 <!-- ── Game Code Modal ── -->
-<div id="gameCodeModal">
+<div id="gameCodeModal" class="modal-overlay">
     <div class="modal-box">
         <h2>Game Created!</h2>
         <p>Share this code with your friend to join the game.</p>
@@ -150,8 +141,19 @@
     </div>
 </div>
 
+<!-- ── Error Modal ── -->
+<div id="errorModal" class="modal-overlay">
+    <div class="modal-box">
+        <h2>Oops</h2>
+        <p id="errorModalText"></p>
+        <div class="modal-actions">
+            <button class="accent" onclick="closeErrorModal()">OK</button>
+        </div>
+    </div>
+</div>
+
 <!-- ── Knock Modal ── -->
-<div id="knockModal">
+<div id="knockModal" class="modal-overlay">
     <div class="modal-box">
         <h2>Declare Melds</h2>
         <p>Enter each meld as comma-separated cards (e.g. <code>AH,AS,AD</code>), one meld per line.</p>
@@ -184,10 +186,35 @@
     }
 
     // ── State ──
-    let gameId = null;
+    let gameId   = null;
     let myPlayer = null;
     let selectedCard = null;
     let pollInterval = null;
+
+    // ── Modals ──
+    function showErrorModal(msg) {
+        document.getElementById('errorModalText').textContent = msg;
+        document.getElementById('errorModal').style.display = 'flex';
+    }
+    function closeErrorModal() { document.getElementById('errorModal').style.display = 'none'; }
+
+    function showGameCodeModal(code) {
+        document.getElementById('gameCodeText').textContent = code;
+        document.getElementById('gameCodeModal').style.display = 'flex';
+    }
+    function closeGameCodeModal() { document.getElementById('gameCodeModal').style.display = 'none'; }
+
+    function copyGameCode() {
+        const code = document.getElementById('gameCodeText').textContent;
+        navigator.clipboard.writeText(code).then(() => {
+            const btn = document.getElementById('copyBtn');
+            btn.textContent = 'Copied!';
+            setTimeout(() => btn.textContent = 'Copy', 2000);
+        });
+    }
+
+    function openKnockModal()  { document.getElementById('knockModal').style.display = 'flex'; }
+    function closeKnockModal() { document.getElementById('knockModal').style.display = 'none'; }
 
     // ── Card Image URL ──
     function cardImgUrl(cardStr) {
@@ -212,7 +239,7 @@
         selectedCard = null;
     }
 
-    // ── Render Opponent Hand (face-down) ──
+    // ── Render Opponent Hand ──
     function renderOpponentHand(count) {
         const el = document.getElementById('opponent-hand');
         el.innerHTML = '';
@@ -255,13 +282,14 @@
     // ── Lobby ──
     async function createGame() {
         const name = document.getElementById('nameInput').value.trim();
-        if (!name) return alert('Enter your name');
+        if (!name) return showErrorModal('Please enter your name.');
         const res = await fetch('/games', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ player1_name: name })
         });
         const data = await res.json();
+        if (!res.ok) return showErrorModal(data.detail);
         gameId = data.game_id;
         myPlayer = 'player1';
         showGameCodeModal(gameId);
@@ -271,14 +299,14 @@
     async function joinGame() {
         const code = document.getElementById('joinCode').value.trim();
         const name = document.getElementById('joinName').value.trim();
-        if (!code || !name) return alert('Enter both the game code and your name');
+        if (!code || !name) return showErrorModal('Please enter both a game code and your name.');
         const res = await fetch(`/games/${code}/join`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ player2_name: name })
         });
-        if (!res.ok) return alert('Could not join — check the game code');
         const data = await res.json();
+        if (!res.ok) return showErrorModal(data.detail);
         gameId = code;
         myPlayer = 'player2';
         startGame(data.state);
@@ -312,9 +340,9 @@
             (myPlayer === 'player1' ? state.player2_score : state.player1_score) + ' pts';
 
         let statusText = '';
-        if (state.phase === 'waiting')        statusText = '⏳ Waiting for opponent...';
-        else if (state.phase === 'playing')   statusText = isMyTurn ? '🟢 Your turn' : '⏳ Their turn';
-        else if (state.phase === 'scoring')   statusText = '🃏 Hand over';
+        if (state.phase === 'waiting')       statusText = '⏳ Waiting for opponent...';
+        else if (state.phase === 'playing')  statusText = isMyTurn ? '🟢 Your turn' : '⏳ Their turn';
+        else if (state.phase === 'scoring')  statusText = '🃏 Hand over';
         else if (state.phase === 'finished') {
             statusText = '🏆 Game over!';
             clearInterval(pollInterval);
@@ -339,12 +367,12 @@
         });
         const data = await res.json();
         if (res.ok) { applyState(data.state); log(`You drew from the ${source}.`); }
-        else log(`⚠ ${data.detail}`);
+        else showErrorModal(data.detail);
     }
 
     // ── Discard ──
     async function discardSelected() {
-        if (!selectedCard) return alert('Select a card to discard first');
+        if (!selectedCard) return showErrorModal('Select a card to discard first.');
         const res = await fetch(`/games/${gameId}/discard`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -352,31 +380,10 @@
         });
         const data = await res.json();
         if (res.ok) { log(`You discarded ${selectedCard}.`); applyState(data.state); }
-        else log(`⚠ ${data.detail}`);
-    }
-
-    function showGameCodeModal(code) {
-        document.getElementById('gameCodeText').textContent = code;
-        document.getElementById('gameCodeModal').style.display = 'flex';
-    }
-
-    function closeGameCodeModal() {
-        document.getElementById('gameCodeModal').style.display = 'none';
-    }
-
-    function copyGameCode() {
-        const code = document.getElementById('gameCodeText').textContent;
-        navigator.clipboard.writeText(code).then(() => {
-            const btn = document.getElementById('copyBtn');
-            btn.textContent = 'Copied!';
-            setTimeout(() => btn.textContent = 'Copy', 2000);
-        });
+        else showErrorModal(data.detail);
     }
 
     // ── Knock ──
-    function openKnockModal()  { document.getElementById('knockModal').style.display = 'flex'; }
-    function closeKnockModal() { document.getElementById('knockModal').style.display = 'none'; }
-
     async function submitKnock() {
         const raw = document.getElementById('meldInput').value.trim();
         const melds = raw.length === 0 ? [] : raw.split('\n').map(line =>
@@ -393,7 +400,7 @@
             const msg = data.gin ? '🎉 GIN!' : data.undercut ? '😬 Undercut!' : '✊ Knocked!';
             log(`${msg} ${data.points_scored} pts scored by ${data.winner}.`);
             applyState(data.state);
-        } else log(`⚠ ${data.detail}`);
+        } else showErrorModal(data.detail);
     }
 
     // ── Log ──

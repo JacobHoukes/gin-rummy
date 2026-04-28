@@ -587,44 +587,9 @@ button.danger:hover {
 
 
 /* ============================================================
-   11. MODAL
+   11. MODALS
    ============================================================ */
-#gameCodeModal {
-    display: none;
-    position: fixed;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    background: rgba(0,0,0,0.55);
-    backdrop-filter: blur(4px);
-    align-items: center;
-    justify-content: center;
-    z-index: 100;
-}
-
-.game-code-display {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    background: var(--surface-2);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    padding: 12px 16px;
-    margin-bottom: 4px;
-}
-
-.game-code-display span {
-    font-size: 1.8rem;
-    font-weight: 800;
-    letter-spacing: 0.1em;
-    color: var(--accent);
-    flex: 1;
-}
-
-.game-code-display button {
-    flex-shrink: 0;
-}
-
-#knockModal {
+.modal-overlay {
     display: none;
     position: fixed;
     top: 0; left: 0;
@@ -691,4 +656,27 @@ button.danger:hover {
     margin-top: 16px;
     display: flex;
     gap: 8px;
+}
+
+.game-code-display {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 12px 16px;
+    margin-bottom: 4px;
+}
+
+.game-code-display span {
+    font-size: 1.8rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+    flex: 1;
+}
+
+.game-code-display button {
+    flex-shrink: 0;
 }
