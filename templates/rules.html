@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gin Rummy — Rules</title>
+
+    <style id="critical-theme">
+        html, body { background: #021a0f; min-height: 100%; }
+    </style>
+
+    <script>
+        (function() {
+            try {
+                var stored = localStorage.getItem('gr-theme');
+                var theme = stored || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+                document.documentElement.setAttribute('data-theme', theme);
+                var sheet = document.getElementById('critical-theme');
+                if (sheet) sheet.textContent = theme === 'dark'
+                    ? 'html,body{background:#021a0f;min-height:100%;}'
+                    : 'html,body{background:#bcc0c4;min-height:100%;}';
+            } catch(_) {}
+        })();
+    </script>
+
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<header class="topbar">
+    <div class="topbar-inner">
+        <a href="/board" class="brand-name">Gin Rummy</a>
+        <div class="topbar-actions">
+            <a href="/account"><button class="accent">{{ username }}</button></a>
+            <a href="/rules"><button>Rules</button></a>
+            <a href="/logout"><button class="danger">Logout</button></a>
+            <button id="theme-toggle" class="icon-button" type="button" title="Toggle theme">
+                <span class="theme-svg-icon">
+                    <svg viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="5"/>
+                        <line x1="12" y1="1"  x2="12" y2="3"/>
+                        <line x1="12" y1="21" x2="12" y2="23"/>
+                        <line x1="4.22"  y1="4.22"  x2="5.64"  y2="5.64"/>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                        <line x1="1"  y1="12" x2="3"  y2="12"/>
+                        <line x1="21" y1="12" x2="23" y2="12"/>
+                        <line x1="4.22"  y1="19.78" x2="5.64"  y2="18.36"/>
+                        <line x1="18.36" y1="5.64"  x2="19.78" y2="4.22"/>
+                    </svg>
+                </span>
+                <span class="theme-separator">/</span>
+                <span class="theme-svg-icon">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                    </svg>
+                </span>
+            </button>
+        </div>
+    </div>
+</header>
+
+<main class="page">
+    <div class="rules-container">
+
+        <div class="rules-header">
+            <h1>How to Play <span>Gin Rummy</span></h1>
+            <p class="rules-intro">A two-player card game of skill and strategy. First to 100 points wins.</p>
+        </div>
+
+        <div class="rules-section">
+            <h2 class="rules-section-title">The Goal</h2>
+            <p>Reduce the value of your unmatched cards — called <strong>deadwood</strong> — to 10 points or fewer, then knock. The player with less deadwood scores the difference. First to reach <strong>100 points wins</strong>.</p>
+        </div>
+
+        <div class="rules-section">
+            <h2 class="rules-section-title">Card Values</h2>
+            <div class="rules-values">
+                <div class="rules-value-item">
+                    <span class="rules-value-label">Ace</span>
+                    <span class="rules-value-pts">1 pt</span>
+                </div>
+                <div class="rules-value-item">
+                    <span class="rules-value-label">2 – 10</span>
+                    <span class="rules-value-pts">Face value</span>
+                </div>
+                <div class="rules-value-item">
+                    <span class="rules-value-label">J, Q, K</span>
+                    <span class="rules-value-pts">10 pts each</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="rules-section">
+            <h2 class="rules-section-title">Melds</h2>
+            <p>Melded cards don't count as deadwood. There are two types:</p>
+            <div class="rules-melds">
+                <div class="rules-meld-card">
+                    <div class="rules-meld-title">Set</div>
+                    <div class="rules-meld-desc">3 or 4 cards of the <strong>same rank</strong></div>
+                    <div class="rules-meld-example">e.g. 8♥ 8♦ 8♠</div>
+                </div>
+                <div class="rules-meld-card">
+                    <div class="rules-meld-title">Run</div>
+                    <div class="rules-meld-desc">3 or more <strong>consecutive cards</strong> of the same suit</div>
+                    <div class="rules-meld-example">e.g. 3♥ 4♥ 5♥</div>
+                </div>
+            </div>
+            <p class="rules-note">⚠️ Aces are low only — A♠ 2♠ 3♠ is valid, but Q♠ K♠ A♠ is not.</p>
+        </div>
+
+        <div class="rules-section">
+            <h2 class="rules-section-title">Taking a Turn</h2>
+            <div class="rules-steps">
+                <div class="rules-step">
+                    <div class="rules-step-num">1</div>
+                    <div class="rules-step-text"><strong>Draw</strong> one card — either the top card from the stock pile, or the top card from the discard pile.</div>
+                </div>
+                <div class="rules-step">
+                    <div class="rules-step-num">2</div>
+                    <div class="rules-step-text"><strong>Discard</strong> one card by dragging it to the discard pile. This ends your turn.</div>
+                </div>
+                <div class="rules-step">
+                    <div class="rules-step-num">3</div>
+                    <div class="rules-step-text">Optionally, <strong>knock</strong> instead of discarding — if your deadwood is 10 or fewer points.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="rules-section">
+            <h2 class="rules-section-title">Knocking</h2>
+            <p>When you knock, the game automatically finds the best melds in both hands and calculates deadwood. Three outcomes are possible:</p>
+            <div class="rules-outcomes">
+                <div class="rules-outcome">
+                    <div class="rules-outcome-title rules-outcome--gin">Gin 🎉</div>
+                    <div class="rules-outcome-desc">You have <strong>zero deadwood</strong>. You score the difference in deadwood plus a <strong>25-point bonus</strong>.</div>
+                </div>
+                <div class="rules-outcome">
+                    <div class="rules-outcome-title rules-outcome--knock">Knock ✊</div>
+                    <div class="rules-outcome-desc">Your deadwood is less than your opponent's. You score the <strong>difference in deadwood</strong>.</div>
+                </div>
+                <div class="rules-outcome">
+                    <div class="rules-outcome-title rules-outcome--undercut">Undercut 😬</div>
+                    <div class="rules-outcome-desc">Your opponent's deadwood is <strong>equal to or less than yours</strong>. They score the difference plus a <strong>25-point bonus</strong>.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="rules-section">
+            <h2 class="rules-section-title">Tips</h2>
+            <p>Use the <strong>Sort by Suit</strong> button to spot runs, and <strong>Sort by Value</strong> to spot sets. You can also drag cards within your hand to arrange them however you like. The newly drawn card is highlighted briefly so you always know what you just picked up.</p>
+        </div>
+
+    </div>
+</main>
+
+<footer class="footer">
+    <p class="footer-copy">Gin Rummy &copy; 2026</p>
+</footer>
+
+<script>
+    const root = document.documentElement;
+    const toggleBtn = document.getElementById('theme-toggle');
+
+    function applyTheme(theme) {
+        root.setAttribute('data-theme', theme);
+        try { localStorage.setItem('gr-theme', theme); } catch(_) {}
+        const sheet = document.getElementById('critical-theme');
+        if (sheet) sheet.textContent = theme === 'dark'
+            ? 'html,body{background:#021a0f;min-height:100%;}'
+            : 'html,body{background:#bcc0c4;min-height:100%;}';
+    }
+
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', () => {
+            applyTheme(root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+        });
+    }
+
+    applyTheme(localStorage.getItem('gr-theme') || 'dark');
+</script>
+
+</body>
+</html>

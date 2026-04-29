@@ -373,6 +373,195 @@ button.danger:hover {
 
 
 /* ============================================================
+   7b. RULES PAGE
+   ============================================================ */
+.rules-container {
+    max-width: 640px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+}
+
+.rules-header {
+    text-align: center;
+    padding-bottom: 8px;
+}
+
+.rules-intro {
+    color: var(--muted);
+    font-size: 1rem;
+    margin-top: 8px;
+}
+
+.rules-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 32px;
+    box-shadow: var(--shadow-1);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.rules-section p {
+    color: var(--text);
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+.rules-section-title {
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+}
+
+.rules-note {
+    font-size: 0.875rem !important;
+    color: var(--muted) !important;
+    background: color-mix(in srgb, var(--accent) 6%, var(--surface));
+    border: 1px solid color-mix(in srgb, var(--accent) 25%, var(--border));
+    border-radius: var(--radius-md);
+    padding: 10px 14px;
+}
+
+.rules-values {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.rules-value-item {
+    flex: 1;
+    min-width: 100px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: center;
+}
+
+.rules-value-label {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--text);
+}
+
+.rules-value-pts {
+    font-size: 0.8rem;
+    color: var(--accent);
+    font-weight: 600;
+}
+
+.rules-melds {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.rules-meld-card {
+    flex: 1;
+    min-width: 160px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.rules-meld-title {
+    font-weight: 800;
+    font-size: 1rem;
+    color: var(--accent);
+}
+
+.rules-meld-desc {
+    font-size: 0.875rem;
+    color: var(--text);
+    line-height: 1.5;
+}
+
+.rules-meld-example {
+    font-size: 0.85rem;
+    color: var(--muted);
+    font-style: italic;
+}
+
+.rules-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.rules-step {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+}
+
+.rules-step-num {
+    width: 28px;
+    height: 28px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--accent) 15%, var(--surface));
+    border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--border));
+    color: var(--accent);
+    font-weight: 800;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.rules-step-text {
+    font-size: 0.95rem;
+    color: var(--text);
+    line-height: 1.6;
+    padding-top: 3px;
+}
+
+.rules-outcomes {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.rules-outcome {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.rules-outcome-title {
+    font-weight: 800;
+    font-size: 0.95rem;
+}
+
+.rules-outcome--gin   { color: #10b981; }
+.rules-outcome--knock { color: var(--accent); }
+.rules-outcome--undercut { color: #ef4444; }
+
+.rules-outcome-desc {
+    font-size: 0.875rem;
+    color: var(--text);
+    line-height: 1.5;
+}
+
+
+/* ============================================================
    8. LOBBY
    ============================================================ */
 #lobby {

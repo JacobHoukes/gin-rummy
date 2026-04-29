@@ -462,3 +462,15 @@ def new_hand(game_id: str, request: Request, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(game)
     return {"state": build_game_state(game, "player1")}
+
+
+@app.get("/rules")
+def rules_page(request: Request, db: Session = Depends(get_db)):
+    """This endpoint serves the rules page."""
+    payload = get_session_payload(request)
+    user = db.query(User).filter(User.id == payload["id"]).first()
+    if not user or user.session_version != payload["v"]:
+        response = RedirectResponse("/login", status_code=302)
+        response.delete_cookie(SESSION_COOKIE)
+        return response
+    return templates.TemplateResponse(request, "rules.html", {"username": user.username})
