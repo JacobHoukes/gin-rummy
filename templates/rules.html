@@ -32,7 +32,7 @@
         <a href="/board" class="brand-name">Gin Rummy</a>
         <div class="topbar-actions">
             <a href="/account"><button class="accent">{{ username }}</button></a>
-            <a href="/rules"><button>Rules</button></a>
+            <a href="/rules"><button class="info">Rules</button></a>
             <a href="/logout"><button class="danger">Logout</button></a>
             <button id="theme-toggle" class="icon-button" type="button" title="Toggle theme">
                 <span class="theme-svg-icon">
@@ -92,7 +92,7 @@
 
         <div class="rules-section">
             <h2 class="rules-section-title">Melds</h2>
-            <p>Melded cards don't count as deadwood. There are two types:</p>
+            <p>Melded cards do not count as deadwood. There are two types:</p>
             <div class="rules-melds">
                 <div class="rules-meld-card">
                     <div class="rules-meld-title">Set</div>
@@ -105,7 +105,7 @@
                     <div class="rules-meld-example">e.g. 3♥ 4♥ 5♥</div>
                 </div>
             </div>
-            <p class="rules-note">⚠️ Aces are low only — A♠ 2♠ 3♠ is valid, but Q♠ K♠ A♠ is not.</p>
+            <p class="rules-note">Aces are low only — A♠ 2♠ 3♠ is valid, but Q♠ K♠ A♠ is not.</p>
         </div>
 
         <div class="rules-section">
@@ -131,15 +131,15 @@
             <p>When you knock, the game automatically finds the best melds in both hands and calculates deadwood. Three outcomes are possible:</p>
             <div class="rules-outcomes">
                 <div class="rules-outcome">
-                    <div class="rules-outcome-title rules-outcome--gin">Gin 🎉</div>
+                    <div class="rules-outcome-title rules-outcome--gin">Gin</div>
                     <div class="rules-outcome-desc">You have <strong>zero deadwood</strong>. You score the difference in deadwood plus a <strong>25-point bonus</strong>.</div>
                 </div>
                 <div class="rules-outcome">
-                    <div class="rules-outcome-title rules-outcome--knock">Knock ✊</div>
+                    <div class="rules-outcome-title rules-outcome--knock">Knock</div>
                     <div class="rules-outcome-desc">Your deadwood is less than your opponent's. You score the <strong>difference in deadwood</strong>.</div>
                 </div>
                 <div class="rules-outcome">
-                    <div class="rules-outcome-title rules-outcome--undercut">Undercut 😬</div>
+                    <div class="rules-outcome-title rules-outcome--undercut">Undercut</div>
                     <div class="rules-outcome-desc">Your opponent's deadwood is <strong>equal to or less than yours</strong>. They score the difference plus a <strong>25-point bonus</strong>.</div>
                 </div>
             </div>

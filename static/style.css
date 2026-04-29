@@ -177,6 +177,16 @@ button.danger:hover {
     background: color-mix(in srgb, #ef4444 14%, var(--surface));
 }
 
+button.info {
+    color: #0F52BA;
+    border-color: color-mix(in srgb, #0F52BA 55%, var(--border));
+    background: color-mix(in srgb, #0F52BA 8%, var(--surface));
+}
+
+button.info:hover {
+    background: color-mix(in srgb, #0F52BA 14%, var(--surface));
+}
+
 
 /* ============================================================
    5. TOPBAR

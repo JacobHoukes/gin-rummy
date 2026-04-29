@@ -30,10 +30,10 @@
 <!-- ── Top Bar ── -->
 <header class="topbar">
     <div class="topbar-inner">
-        <a href="/board" class="brand-name">Gin Rummy</a>
+        <span class="brand-name">Gin Rummy</span>
         <div class="topbar-actions">
             <a href="/account"><button class="accent">{{ username }}</button></a>
-            <a href="/rules"><button>Rules</button></a>
+            <a href="/rules"><button class="info">Rules</button></a>
             <a href="/logout"><button class="danger">Logout</button></a>
             <button id="theme-toggle" class="icon-button" type="button" title="Toggle theme">
                 <span class="theme-svg-icon">
@@ -235,9 +235,9 @@
         const actions = document.getElementById('meldResultActions');
 
         let headline = '';
-        if (data.gin) headline = '🎉 GIN!';
-        else if (data.undercut) headline = '😬 Undercut!';
-        else headline = '✊ Knocked!';
+        if (data.gin) headline = 'Gin!';
+        else if (data.undercut) headline = 'Undercut!';
+        else headline = 'Knocked!';
 
         const winnerName = data.winner === myPlayer ? yourName : opponentName;
 
@@ -257,7 +257,7 @@
                         <div class="knock-result-deadwood-label">Deadwood (${data.knocker_deadwood_value} pts)</div>
                         <div class="knock-result-set">
                             ${data.knocker_deadwood.map(c => `<img src="${cardImgUrl(c)}" class="knock-card knock-card--dead" />`).join('')}
-                        </div>` : '<div class="knock-result-deadwood-label">No deadwood — Gin! 🎉</div>'}
+                        </div>` : '<div class="knock-result-deadwood-label">No deadwood — Gin!</div>'}
                 </div>
                 <div class="knock-result-player">
                     <div class="knock-result-label">${opponentName}</div>
@@ -282,7 +282,7 @@
             const oppScoreNum  = parseInt(document.getElementById('opponentScore').textContent);
             const overallWinner = yourScoreNum >= oppScoreNum ? yourName : opponentName;
             actions.innerHTML = `
-                <p class="knock-result-summary" style="margin-bottom:16px;">🏆 Game over! <strong>${overallWinner}</strong> wins the match!</p>
+                <p class="knock-result-summary" style="margin-bottom:16px;">Game over! <strong>${overallWinner}</strong> wins the match!</p>
                 <button class="accent" onclick="closeMeldResultModal(); showLobby();">New Game</button>
                 <button onclick="closeMeldResultModal()">Stay</button>
             `;
@@ -363,7 +363,6 @@
                 setTimeout(() => img.classList.remove('card-new'), 2000);
             }
 
-            // Drag to discard pile
             img.addEventListener('dragstart', e => {
                 e.dataTransfer.setData('text/plain', card);
                 e.dataTransfer.setData('source', 'hand');
@@ -377,7 +376,6 @@
                 setTimeout(() => { isDragging = false; dragSrcCard = null; }, 100);
             });
 
-            // Drag to reorder within hand
             img.addEventListener('dragover', e => {
                 e.preventDefault();
                 if (dragSrcCard && dragSrcCard !== card) {
@@ -391,7 +389,6 @@
                 e.stopPropagation();
                 img.classList.remove('drag-over-card');
                 if (!dragSrcCard || dragSrcCard === card) return;
-                // Reorder hand
                 const allCards = [...handEl.querySelectorAll('.card-img')].map(i => i.dataset.card);
                 const fromIdx = allCards.indexOf(dragSrcCard);
                 const toIdx   = allCards.indexOf(card);
@@ -407,7 +404,7 @@
     }
 
     function renderHand(cards) {
-        if (currentSort === 'manual') return; // preserve manual order
+        if (currentSort === 'manual') return;
         renderHandFromArray(applySortMode(cards));
     }
 
@@ -464,7 +461,6 @@
 
         container.addEventListener('dragover', e => {
             if (!drawnThisTurn || !isMyTurn) return;
-            // Only allow if dragging from hand (not reordering)
             e.preventDefault();
             container.classList.add('drag-over');
         });
@@ -548,11 +544,11 @@
             (myPlayer === 'player1' ? state.player2_score : state.player1_score) + ' pts';
 
         let statusText = '';
-        if (state.phase === 'waiting')       statusText = '⏳ Waiting for opponent...';
-        else if (state.phase === 'playing')  statusText = isMyTurn ? '🟢 Your turn' : '⏳ Their turn';
-        else if (state.phase === 'scoring')  statusText = '🃏 Hand over';
+        if (state.phase === 'waiting')       statusText = 'Waiting for opponent...';
+        else if (state.phase === 'playing')  statusText = isMyTurn ? 'Your turn' : 'Their turn';
+        else if (state.phase === 'scoring')  statusText = 'Hand over';
         else if (state.phase === 'finished') {
-            statusText = '🏆 Game over!';
+            statusText = 'Game over!';
             clearInterval(pollInterval);
         }
         document.getElementById('status').textContent = statusText;
@@ -564,7 +560,6 @@
 
         document.getElementById('btnKnock').disabled = !(isMyTurn && state.drawn_this_turn);
 
-        // Show result modal to both players
         if (state.last_result && !resultShown) {
             resultShown = true;
             const isGameOver = state.phase === 'finished';
@@ -620,7 +615,7 @@
         if (res.ok) {
             const yourName     = document.getElementById('yourName').textContent;
             const opponentName = document.getElementById('opponentName').textContent;
-            const msg = data.gin ? '🎉 GIN!' : data.undercut ? '😬 Undercut!' : '✊ Knocked!';
+            const msg = data.gin ? 'Gin!' : data.undercut ? 'Undercut!' : 'Knocked!';
             const winnerName = data.winner === myPlayer ? yourName : opponentName;
             log(`${msg} ${data.points_scored} pts scored by ${winnerName}.`);
             lastDrawnCard = null;
