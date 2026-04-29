@@ -29,3 +29,4 @@ class Game(Base):
     player2_score = Column(Integer, default=0)
     knocked_by = Column(String, nullable=True)
     drawn_this_turn = Column(Boolean, default=False)
+    last_result = Column(JSON, nullable=True)

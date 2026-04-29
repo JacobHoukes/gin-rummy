@@ -38,6 +38,25 @@ def build_game_state(game: Game, player: str) -> GameState:
     """This function builds and returns a GameState for the requesting player, showing only their own hand."""
     hand = game.player1_hand if player == "player1" else game.player2_hand
     discard_top = game.discard_pile[-1] if game.discard_pile else None
+
+    # Flip the result perspective for the opponent
+    last_result = None
+    if game.last_result:
+        result = dict(game.last_result)
+        if result.get("knocker") != player:
+            # Swap knocker/opponent data for the other player
+            last_result = {
+                **result,
+                "knocker_sets": result.get("opponent_sets", []),
+                "knocker_deadwood": result.get("opponent_deadwood", []),
+                "knocker_deadwood_value": result.get("opponent_deadwood_value", 0),
+                "opponent_sets": result.get("knocker_sets", []),
+                "opponent_deadwood": result.get("knocker_deadwood", []),
+                "opponent_deadwood_value": result.get("knocker_deadwood_value", 0),
+            }
+        else:
+            last_result = result
+
     return GameState(
         game_id=game.id,
         player1_name=game.player1_name,
@@ -51,6 +70,7 @@ def build_game_state(game: Game, player: str) -> GameState:
         stock_count=len(game.stock),
         drawn_this_turn=game.drawn_this_turn,
         knocked_by=game.knocked_by,
+        last_result=last_result,
     )
 
 
@@ -389,6 +409,23 @@ def knock(game_id: str, body: KnockAction, request: Request, db: Session = Depen
     knocker_deadwood_cards = [c for c in knocker_hand if c not in knocker_melded]
     opponent_melded = {c for meld in opponent_best_melds for c in meld}
     opponent_deadwood_cards = [c for c in opponent_hand if c not in opponent_melded]
+
+    # Store result for both players to see
+    game.last_result = {
+        "knocker": knocker,
+        "points_scored": points,
+        "gin": gin,
+        "undercut": undercut,
+        "winner": winner,
+        "knocker_sets": best_melds,
+        "knocker_deadwood": knocker_deadwood_cards,
+        "knocker_deadwood_value": knocker_deadwood,
+        "opponent_sets": opponent_best_melds,
+        "opponent_deadwood": opponent_deadwood_cards,
+        "opponent_deadwood_value": opponent_deadwood,
+    }
+    db.commit()
+    db.refresh(game)
 
     return {
         "state": build_game_state(game, knocker),
