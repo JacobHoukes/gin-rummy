@@ -38,7 +38,7 @@ def card_suit(card):
 
 
 def sort_hand(hand):
-    """This function sorts a hand by suit then by rank index, grouping cards naturally for Gin Rummy play."""
+    """This function sorts a hand by suit then by rank index."""
     return sorted(hand, key=lambda c: (SUIT_ORDER[card_suit(c)], card_rank_index(c)))
 
 
@@ -57,7 +57,7 @@ def is_valid_set(cards):
 
 
 def is_valid_run(cards):
-    """This function checks whether a list of cards forms a valid run: 3 or more consecutive cards of the same suit."""
+    """This function checks whether a list of cards forms a valid run: 3 or more consecutive cards of the same suit. Aces are low only."""
     if len(cards) < 3:
         return False
     suits = [card_suit(c) for c in cards]
@@ -76,7 +76,6 @@ def find_all_melds(hand):
     """This function finds all possible valid melds (sets and runs) within a hand."""
     melds = []
 
-    # Find all valid sets (same rank)
     by_rank = {}
     for card in hand:
         rank = card[:-1]
@@ -88,7 +87,6 @@ def find_all_melds(hand):
                 for combo in combinations(cards, size):
                     melds.append(list(combo))
 
-    # Find all valid runs (same suit, consecutive)
     by_suit = {}
     for card in hand:
         suit = card_suit(card)
@@ -109,7 +107,6 @@ def find_all_melds(hand):
 def find_best_melds(hand):
     """This function finds the optimal combination of melds that minimizes deadwood in the given hand."""
     all_melds = find_all_melds(hand)
-    hand_set = set(hand)
     best_melds = []
     best_deadwood = hand_deadwood(hand, [])
 
@@ -121,7 +118,7 @@ def find_best_melds(hand):
             best_melds = list(current_melds)
         for i, meld in enumerate(available_melds):
             meld_set = set(meld)
-            if meld_set.issubset(remaining_cards):
+            if meld_set.issubset(set(remaining_cards)):
                 new_remaining = [c for c in remaining_cards if c not in meld_set]
                 search(new_remaining, current_melds + [meld], available_melds[i + 1:])
 
@@ -138,10 +135,10 @@ def deal(deck):
 
 
 def can_knock(hand, melds):
-    """This function returns True if the deadwood value of the hand is 10 or fewer, meaning the player is allowed to knock."""
+    """This function returns True if the deadwood value of the hand is 10 or fewer."""
     return hand_deadwood(hand, melds) <= 10
 
 
 def is_gin(hand, melds):
-    """This function returns True if the player has zero deadwood, meaning they have Gin."""
+    """This function returns True if the player has zero deadwood."""
     return hand_deadwood(hand, melds) == 0

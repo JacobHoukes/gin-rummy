@@ -39,12 +39,10 @@ def build_game_state(game: Game, player: str) -> GameState:
     hand = game.player1_hand if player == "player1" else game.player2_hand
     discard_top = game.discard_pile[-1] if game.discard_pile else None
 
-    # Flip the result perspective for the opponent
     last_result = None
     if game.last_result:
         result = dict(game.last_result)
         if result.get("knocker") != player:
-            # Swap knocker/opponent data for the other player
             last_result = {
                 **result,
                 "knocker_sets": result.get("opponent_sets", []),
@@ -115,7 +113,7 @@ def login(request: Request, username: str = Form(), password: str = Form(), db: 
 
 @app.post("/register")
 def register(request: Request, username: str = Form(), password: str = Form(), db: Session = Depends(get_db)):
-    """This endpoint creates a new user account if the username is on the allowed list, and logs them in immediately."""
+    """This endpoint creates a new user account if the username is on the allowed list."""
     if username.lower() not in get_allowed_usernames():
         return templates.TemplateResponse(request, "login.html", {"error": "registration_closed"})
     if db.query(User).filter(User.username == username).first():
@@ -355,7 +353,7 @@ def discard_card(game_id: str, body: DiscardCard, request: Request, db: Session 
 
 @app.post("/games/{game_id}/knock")
 def knock(game_id: str, body: KnockAction, request: Request, db: Session = Depends(get_db)):
-    """This endpoint handles knocking — auto-detects best sets, calculates score, and returns result for confirmation."""
+    """This endpoint handles knocking — auto-detects best melds, calculates score, and stores result for both players."""
     get_current_user_id(request)
     game = get_game_or_404(game_id, db)
     if game.phase != "playing":
@@ -370,7 +368,6 @@ def knock(game_id: str, body: KnockAction, request: Request, db: Session = Depen
     knocker_hand = list(game.player1_hand if knocker == "player1" else game.player2_hand)
     opponent_hand = list(game.player2_hand if knocker == "player1" else game.player1_hand)
 
-    # Auto-detect best melds
     best_melds, knocker_deadwood = find_best_melds(knocker_hand)
 
     if knocker_deadwood > 10:
@@ -401,16 +398,12 @@ def knock(game_id: str, body: KnockAction, request: Request, db: Session = Depen
     game.knocked_by = knocker
     game.phase = "finished" if max(game.player1_score, game.player2_score) >= 100 else "scoring"
     game.current_turn = None
-    db.commit()
-    db.refresh(game)
 
-    # Build deadwood lists
     knocker_melded = {c for meld in best_melds for c in meld}
     knocker_deadwood_cards = [c for c in knocker_hand if c not in knocker_melded]
     opponent_melded = {c for meld in opponent_best_melds for c in meld}
     opponent_deadwood_cards = [c for c in opponent_hand if c not in opponent_melded]
 
-    # Store result for both players to see
     game.last_result = {
         "knocker": knocker,
         "points_scored": points,
@@ -440,3 +433,32 @@ def knock(game_id: str, body: KnockAction, request: Request, db: Session = Depen
         "knocker_deadwood_value": knocker_deadwood,
         "opponent_deadwood_value": opponent_deadwood,
     }
+
+
+@app.post("/games/{game_id}/new-hand")
+def new_hand(game_id: str, request: Request, db: Session = Depends(get_db)):
+    """This endpoint resets the cards for a new hand while preserving cumulative scores."""
+    get_current_user_id(request)
+    game = get_game_or_404(game_id, db)
+    if game.phase not in ("scoring", "finished"):
+        raise HTTPException(status_code=400, detail="Round is not over yet")
+    if game.phase == "finished":
+        raise HTTPException(status_code=400, detail="Game is already finished — start a new game")
+
+    deck = shuffle_deck(build_deck())
+    p1_hand, p2_hand, stock = deal(deck)
+    discard_pile = [stock.pop()]
+
+    game.player1_hand = sort_hand(p1_hand)
+    game.player2_hand = sort_hand(p2_hand)
+    game.stock = stock
+    game.discard_pile = discard_pile
+    game.current_turn = "player1"
+    game.phase = "playing"
+    game.knocked_by = None
+    game.drawn_this_turn = False
+    game.last_result = None
+
+    db.commit()
+    db.refresh(game)
+    return {"state": build_game_state(game, "player1")}

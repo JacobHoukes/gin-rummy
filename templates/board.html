@@ -155,14 +155,12 @@
     </div>
 </div>
 
-<!-- ── Knock Result Modal ── -->
-<div id="knockResultModal" class="modal-overlay">
+<!-- ── Meld Result Modal ── -->
+<div id="meldResultModal" class="modal-overlay">
     <div class="modal-box modal-box--wide">
-        <h2 id="knockResultTitle">Round Over</h2>
-        <div id="knockResultBody"></div>
-        <div class="modal-actions">
-            <button class="accent" onclick="closeKnockResultModal()">OK</button>
-        </div>
+        <h2 id="meldResultTitle">Round Over</h2>
+        <div id="meldResultBody"></div>
+        <div id="meldResultActions" class="modal-actions"></div>
     </div>
 </div>
 
@@ -196,6 +194,8 @@
     let currentSort   = 'server';
     let lastDrawnCard = null;
     let resultShown   = false;
+    let currentPhase  = null;
+    let dragSrcCard   = null;
 
     // ── Card helpers ──
     const SUIT_ORDER = { H: 0, D: 1, C: 2, S: 3 };
@@ -225,12 +225,13 @@
         });
     }
 
-    function closeKnockResultModal() {
-        document.getElementById('knockResultModal').style.display = 'none';
+    function closeMeldResultModal() {
+        document.getElementById('meldResultModal').style.display = 'none';
     }
 
-    function showKnockResult(data, yourName, opponentName) {
-        const body = document.getElementById('knockResultBody');
+    function showMeldResult(data, yourName, opponentName, isGameOver) {
+        const body    = document.getElementById('meldResultBody');
+        const actions = document.getElementById('meldResultActions');
 
         let headline = '';
         if (data.gin) headline = '🎉 GIN!';
@@ -245,9 +246,9 @@
                 <div class="knock-result-player">
                     <div class="knock-result-label">${yourName}</div>
                     <div class="knock-result-sets">
-                        ${data.knocker_sets.map(set => `
+                        ${data.knocker_sets.map(meld => `
                             <div class="knock-result-set">
-                                ${set.map(c => `<img src="${cardImgUrl(c)}" class="knock-card" />`).join('')}
+                                ${meld.map(c => `<img src="${cardImgUrl(c)}" class="knock-card" />`).join('')}
                             </div>
                         `).join('')}
                     </div>
@@ -260,9 +261,9 @@
                 <div class="knock-result-player">
                     <div class="knock-result-label">${opponentName}</div>
                     <div class="knock-result-sets">
-                        ${data.opponent_sets.map(set => `
+                        ${data.opponent_sets.map(meld => `
                             <div class="knock-result-set">
-                                ${set.map(c => `<img src="${cardImgUrl(c)}" class="knock-card" />`).join('')}
+                                ${meld.map(c => `<img src="${cardImgUrl(c)}" class="knock-card" />`).join('')}
                             </div>
                         `).join('')}
                     </div>
@@ -275,7 +276,51 @@
             </div>
         `;
 
-        document.getElementById('knockResultModal').style.display = 'flex';
+        if (isGameOver) {
+            const yourScoreNum = parseInt(document.getElementById('yourScore').textContent);
+            const oppScoreNum  = parseInt(document.getElementById('opponentScore').textContent);
+            const overallWinner = yourScoreNum >= oppScoreNum ? yourName : opponentName;
+            actions.innerHTML = `
+                <p class="knock-result-summary" style="margin-bottom:16px;">🏆 Game over! <strong>${overallWinner}</strong> wins the match!</p>
+                <button class="accent" onclick="closeMeldResultModal(); showLobby();">New Game</button>
+                <button onclick="closeMeldResultModal()">Stay</button>
+            `;
+        } else {
+            actions.innerHTML = `
+                <button class="accent" onclick="startNewHand()">Next Hand</button>
+                <button onclick="closeMeldResultModal(); showLobby();">Leave Game</button>
+            `;
+        }
+
+        document.getElementById('meldResultModal').style.display = 'flex';
+    }
+
+    function showLobby() {
+        clearInterval(pollInterval);
+        gameId = null;
+        myPlayer = null;
+        resultShown = false;
+        currentSort = 'server';
+        document.getElementById('game').style.display = 'none';
+        document.getElementById('lobby').style.display = 'flex';
+    }
+
+    async function startNewHand() {
+        closeMeldResultModal();
+        const res = await fetch(`/games/${gameId}/new-hand`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await res.json();
+        if (res.ok) {
+            resultShown = false;
+            currentSort = 'server';
+            lastDrawnCard = null;
+            applyState(data.state);
+            log('New hand started.');
+        } else {
+            showErrorModal(data.detail);
+        }
     }
 
     // ── Card Image URL ──
@@ -303,27 +348,57 @@
     function renderHandFromArray(cards) {
         const handEl = document.getElementById('hand');
         handEl.innerHTML = '';
-        cards.forEach(card => {
+        cards.forEach((card, index) => {
             const img = document.createElement('img');
             img.src = cardImgUrl(card);
             img.alt = card;
             img.className = 'card-img';
             img.draggable = true;
             img.dataset.card = card;
+            img.dataset.index = index;
 
             if (card === lastDrawnCard) {
                 img.classList.add('card-new');
                 setTimeout(() => img.classList.remove('card-new'), 2000);
             }
 
+            // Drag to discard pile
             img.addEventListener('dragstart', e => {
                 e.dataTransfer.setData('text/plain', card);
+                e.dataTransfer.setData('source', 'hand');
                 img.classList.add('dragging');
                 isDragging = true;
+                dragSrcCard = card;
             });
             img.addEventListener('dragend', () => {
                 img.classList.remove('dragging');
-                setTimeout(() => isDragging = false, 100);
+                document.querySelectorAll('.card-img').forEach(c => c.classList.remove('drag-over-card'));
+                setTimeout(() => { isDragging = false; dragSrcCard = null; }, 100);
+            });
+
+            // Drag to reorder within hand
+            img.addEventListener('dragover', e => {
+                e.preventDefault();
+                if (dragSrcCard && dragSrcCard !== card) {
+                    img.classList.add('drag-over-card');
+                }
+            });
+            img.addEventListener('dragleave', () => {
+                img.classList.remove('drag-over-card');
+            });
+            img.addEventListener('drop', e => {
+                e.stopPropagation();
+                img.classList.remove('drag-over-card');
+                if (!dragSrcCard || dragSrcCard === card) return;
+                // Reorder hand
+                const allCards = [...handEl.querySelectorAll('.card-img')].map(i => i.dataset.card);
+                const fromIdx = allCards.indexOf(dragSrcCard);
+                const toIdx   = allCards.indexOf(card);
+                if (fromIdx === -1 || toIdx === -1) return;
+                allCards.splice(fromIdx, 1);
+                allCards.splice(toIdx, 0, dragSrcCard);
+                currentSort = 'manual';
+                renderHandFromArray(allCards);
             });
 
             handEl.appendChild(img);
@@ -331,6 +406,7 @@
     }
 
     function renderHand(cards) {
+        if (currentSort === 'manual') return; // preserve manual order
         renderHandFromArray(applySortMode(cards));
     }
 
@@ -387,6 +463,7 @@
 
         container.addEventListener('dragover', e => {
             if (!drawnThisTurn || !isMyTurn) return;
+            // Only allow if dragging from hand (not reordering)
             e.preventDefault();
             container.classList.add('drag-over');
         });
@@ -457,6 +534,7 @@
     function applyState(state) {
         isMyTurn = state.current_turn === myPlayer;
         drawnThisTurn = state.drawn_this_turn;
+        currentPhase = state.phase;
 
         const yourName     = myPlayer === 'player1' ? state.player1_name : (state.player2_name || 'You');
         const opponentName = myPlayer === 'player1' ? (state.player2_name || 'Opponent') : state.player1_name;
@@ -485,10 +563,11 @@
 
         document.getElementById('btnKnock').disabled = !(isMyTurn && state.drawn_this_turn);
 
-        // Show result modal to loser when they poll and see last_result
+        // Show result modal to both players
         if (state.last_result && !resultShown) {
             resultShown = true;
-            showKnockResult(state.last_result, yourName, opponentName);
+            const isGameOver = state.phase === 'finished';
+            showMeldResult(state.last_result, yourName, opponentName, isGameOver);
         }
     }
 
@@ -502,8 +581,8 @@
         const data = await res.json();
         if (res.ok) {
             const oldCards = new Set([...document.getElementById('hand').querySelectorAll('.card-img')].map(img => img.dataset.card));
-            const newHand = data.state.your_hand;
-            lastDrawnCard = newHand.find(c => !oldCards.has(c)) || null;
+            lastDrawnCard = data.state.your_hand.find(c => !oldCards.has(c)) || null;
+            if (currentSort === 'manual') currentSort = 'server';
             applyState(data.state);
             log(`You drew from the ${source}.`);
         } else {
@@ -521,6 +600,7 @@
         const data = await res.json();
         if (res.ok) {
             lastDrawnCard = null;
+            if (currentSort === 'manual') currentSort = 'server';
             log(`You discarded ${card}.`);
             applyState(data.state);
         } else {
@@ -545,7 +625,7 @@
             lastDrawnCard = null;
             resultShown = true;
             applyState(data.state);
-            showKnockResult(data, yourName, opponentName);
+            showMeldResult(data, yourName, opponentName, data.state.phase === 'finished');
         } else {
             showErrorModal(data.detail);
         }
