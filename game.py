@@ -142,3 +142,9 @@ def can_knock(hand, melds):
 def is_gin(hand, melds):
     """This function returns True if the player has zero deadwood."""
     return hand_deadwood(hand, melds) == 0
+
+
+def is_big_gin(hand):
+    """This function returns True if all 11 cards in hand form valid melds — qualifying for Big Gin."""
+    _, deadwood = find_best_melds(hand)
+    return deadwood == 0 and len(hand) == 11

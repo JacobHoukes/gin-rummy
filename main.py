@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from database import Base, engine, get_db
 from models import Game, User
 from schemas import CreateGame, JoinGame, DrawCard, DiscardCard, KnockAction, GameState
-from game import build_deck, shuffle_deck, deal, is_valid_meld, hand_deadwood, is_gin, find_best_melds, sort_hand
+from game import build_deck, shuffle_deck, deal, is_valid_meld, hand_deadwood, is_gin, find_best_melds, sort_hand, is_big_gin
 from auth import hash_password, verify_password, create_session, get_current_user_id, get_session_payload, \
     SESSION_COOKIE
 
@@ -431,6 +431,79 @@ def knock(game_id: str, body: KnockAction, request: Request, db: Session = Depen
         "opponent_sets": opponent_best_melds,
         "opponent_deadwood": opponent_deadwood_cards,
         "knocker_deadwood_value": knocker_deadwood,
+        "opponent_deadwood_value": opponent_deadwood,
+    }
+
+
+@app.post("/games/{game_id}/big-gin")
+def big_gin(game_id: str, body: KnockAction, request: Request, db: Session = Depends(get_db)):
+    """This endpoint handles a Big Gin — all 11 cards melded, 31-point bonus, no discard needed."""
+    get_current_user_id(request)
+    game = get_game_or_404(game_id, db)
+    if game.phase != "playing":
+        raise HTTPException(status_code=400, detail="Game is not in playing phase")
+    if game.current_turn != body.player:
+        raise HTTPException(status_code=400, detail="Not your turn")
+    if not game.drawn_this_turn:
+        raise HTTPException(status_code=400, detail="You must draw before declaring Big Gin")
+
+    knocker = body.player
+    opponent = "player2" if knocker == "player1" else "player1"
+    knocker_hand = list(game.player1_hand if knocker == "player1" else game.player2_hand)
+    opponent_hand = list(game.player2_hand if knocker == "player1" else game.player1_hand)
+
+    best_melds, knocker_deadwood = find_best_melds(knocker_hand)
+
+    if knocker_deadwood != 0 or len(knocker_hand) != 11:
+        raise HTTPException(status_code=400, detail="Big Gin requires all 11 cards to be melded with no deadwood.")
+
+    opponent_best_melds, opponent_deadwood = find_best_melds(opponent_hand)
+    points = opponent_deadwood + 31
+    winner = knocker
+
+    if winner == "player1":
+        game.player1_score += points
+    else:
+        game.player2_score += points
+
+    game.knocked_by = knocker
+    game.phase = "finished" if max(game.player1_score, game.player2_score) >= 100 else "scoring"
+    game.current_turn = None
+
+    knocker_melded = {c for meld in best_melds for c in meld}
+    knocker_deadwood_cards = [c for c in knocker_hand if c not in knocker_melded]
+    opponent_melded = {c for meld in opponent_best_melds for c in meld}
+    opponent_deadwood_cards = [c for c in opponent_hand if c not in opponent_melded]
+
+    game.last_result = {
+        "knocker": knocker,
+        "points_scored": points,
+        "gin": True,
+        "big_gin": True,
+        "undercut": False,
+        "winner": winner,
+        "knocker_sets": best_melds,
+        "knocker_deadwood": knocker_deadwood_cards,
+        "knocker_deadwood_value": 0,
+        "opponent_sets": opponent_best_melds,
+        "opponent_deadwood": opponent_deadwood_cards,
+        "opponent_deadwood_value": opponent_deadwood,
+    }
+    db.commit()
+    db.refresh(game)
+
+    return {
+        "state": build_game_state(game, knocker),
+        "points_scored": points,
+        "gin": True,
+        "big_gin": True,
+        "undercut": False,
+        "winner": winner,
+        "knocker_sets": best_melds,
+        "knocker_deadwood": knocker_deadwood_cards,
+        "opponent_sets": opponent_best_melds,
+        "opponent_deadwood": opponent_deadwood_cards,
+        "knocker_deadwood_value": 0,
         "opponent_deadwood_value": opponent_deadwood,
     }
 
